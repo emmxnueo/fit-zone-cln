@@ -30,9 +30,13 @@ Lo que el sistema comunica (push y correo) no es un agregado: reacciona a los ev
 
 ## 2. Diagrama de clases del código
 
-El diagrama muestra el módulo de membresías.
+Este primer diagrama muestra el módulo de membresías; el de reservas está más abajo.
 
 ```mermaid
+---
+config:
+  theme: redux-color
+---
 classDiagram
   direction LR
 
@@ -143,6 +147,154 @@ classDiagram
 
 El agregado `SolicitudDeMembresia` es la única puerta para cambiar el estado: toda acción pasa por `siguiente_estado()` (RN-41) y cada cambio registra un evento que la capa de aplicación publica después de guardar.
 
+### Diagrama de clases de reservas, lista de espera y sanciones
+
+```mermaid
+---
+config:
+  theme: redux-color
+---
+classDiagram
+  direction LR
+
+  class ServicioDeClases {
+    <<Application Service>>
+    +crear_clase(nombre, categoria, inicio, capacidad) Clase
+    +reservar(clase_id, socio_id)
+    +cancelar_reserva(clase_id, reserva_id) Clase
+    +confirmar_oferta(clase_id, socio_id) Reserva
+    +registrar_ingreso(socio_id) datetime
+    +procesar_reloj(ahora) ResumenReloj
+    +etiqueta(clase, socio_id) str
+  }
+  class Reloj {
+    <<Port>>
+    +ahora() datetime
+  }
+  class Clase {
+    <<Aggregate Root>>
+    +id: str
+    +nombre: str
+    +categoria: CategoriaClase
+    +inicio: datetime
+    +capacidad: int
+    +instructor: str
+    +salon: str
+    +confirmadas() list
+    +en_espera() list
+    +oferta_activa() EntradaListaEspera
+    +lugares_libres() int
+    +reservar(ctx) Reserva o EntradaListaEspera
+    +cancelar_reserva(reserva, ahora)
+    +confirmar_oferta(ctx) Reserva
+    +expirar_oferta(ahora)
+    +aplicar_tolerancia(ahora, presentes, asignables)
+    +pull_events() list
+  }
+  class Reserva {
+    <<Entity>>
+    +id: str
+    +socio_id: str
+    +creada_en: datetime
+    +estado: EstadoReserva
+  }
+  class EntradaListaEspera {
+    <<Entity>>
+    +id: str
+    +socio_id: str
+    +orden: int
+    +registrada_en: datetime
+    +estado: EstadoEntrada
+    +ofertada_en: datetime
+  }
+  class Socio {
+    <<Aggregate Root>>
+    +id: str
+    +es_premium: bool
+    +activo: bool
+    +sancion_hasta: datetime
+    +tiene_sancion_activa(ahora) bool
+    +registrar_falta(falta)
+    +pull_events() list
+  }
+  class Falta {
+    <<Value Object>>
+    +clase_id: str
+    +momento: datetime
+    +motivo: MotivoFalta
+    +consumida: bool
+  }
+  class ContextoReserva {
+    <<Value Object>>
+    +socio: Socio
+    +categoria: CategoriaClase
+    +membresia_vigente: bool
+    +ahora: datetime
+  }
+  class ElegibleParaReservar {
+    <<Specification>>
+    +is_satisfied_by(ctx) bool
+  }
+  class SocioActivo {
+    <<Specification>>
+  }
+  class MembresiaVigente {
+    <<Specification>>
+  }
+  class PlanIncluyeCategoria {
+    <<Specification>>
+  }
+  class SinSancionActiva {
+    <<Specification>>
+  }
+  class CategoriaClase {
+    <<enumeration>>
+    ESTANDAR
+    PREMIUM
+  }
+  class EstadoReserva {
+    <<enumeration>>
+    CONFIRMADA
+    CANCELADA
+    CANCELADA_TARDE
+    NO_SHOW
+  }
+  class EstadoEntrada {
+    <<enumeration>>
+    EN_ESPERA
+    OFERTADA
+    ASIGNADA
+    EXPIRADA
+  }
+  class MotivoFalta {
+    <<enumeration>>
+    NO_SHOW
+    CANCELACION_TARDIA
+  }
+
+  ServicioDeClases --> Clase : coordina
+  ServicioDeClases --> Socio : registra faltas por evento
+  ServicioDeClases --> Reloj : usa
+  Clase "1" *-- "0..*" Reserva
+  Clase "1" *-- "0..*" EntradaListaEspera
+  Clase --> CategoriaClase
+  Clase ..> ContextoReserva : evalúa
+  Reserva --> EstadoReserva
+  EntradaListaEspera --> EstadoEntrada
+  Reserva ..> Socio : socio_id
+  EntradaListaEspera ..> Socio : socio_id
+  Socio "1" *-- "0..*" Falta
+  Falta --> MotivoFalta
+  ContextoReserva --> Socio
+  ElegibleParaReservar ..> ContextoReserva : evalúa
+  ElegibleParaReservar *-- SocioActivo
+  ElegibleParaReservar *-- MembresiaVigente
+  ElegibleParaReservar *-- PlanIncluyeCategoria
+  ElegibleParaReservar *-- SinSancionActiva
+```
+
+`Clase` y `Socio` son agregados distintos: se relacionan por `socio_id`, no por referencia directa, y la falta cruza de uno a otro con los eventos `NoShowRegistrado` y `CancelacionTardiaRegistrada` (ADR-003).
+
 ### Domain Events implementados
 
 | Evento | Lo emite | Regla |
@@ -168,6 +320,10 @@ El agregado `SolicitudDeMembresia` es la única puerta para cambiar el estado: t
 ## 3. Arquitectura por capas
 
 ```mermaid
+---
+config:
+  theme: redux-color
+---
 flowchart TB
   subgraph API["api/ (FastAPI)"]
     R["routers: solicitudes, clases, socios, reportes, catalogo"]
@@ -212,6 +368,10 @@ Las dependencias apuntan hacia el dominio: `domain` no importa nada de las otras
 ## 4. Modelo de datos (PostgreSQL)
 
 ```mermaid
+---
+config:
+  theme: redux-color
+---
 erDiagram
   SOCIOS ||--o{ SOLICITUDES : "solicita"
   SOLICITUDES ||--|{ LINEAS_SOLICITUD : "contiene"

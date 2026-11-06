@@ -4,8 +4,8 @@
 
 | Documento | Qué responde |
 |---|---|
-| [modelo-dominio.md](modelo-dominio.md) | Entidades, Value Objects, agregado, eventos y servicios; diagrama de clases del código y diagrama por capas |
-| [ciclos-de-vida.md](ciclos-de-vida.md) | Máquinas de estado (las de membresía y reserva están implementadas) y secuencia de los casos de uso principales |
+| [modelo-dominio.md](modelo-dominio.md) | Entidades, Value Objects, agregados, eventos y servicios; diagramas de clases de membresías y de reservas, por capas y modelo de datos |
+| [ciclos-de-vida.md](ciclos-de-vida.md) | Máquinas de estado (las de membresía y reserva están implementadas) y secuencias de los casos de uso principales: activar, congelar, reservar, cancelar y reloj |
 | [patrones.md](patrones.md) | Patrones elegidos, dónde están en el código y por qué |
 | [solid.md](solid.md) | Evidencia de cada principio SOLID en el código y hallazgos pendientes |
 | [adr/](adr/README.md) | Decisiones de arquitectura (contexto, decisión, alternativas, consecuencias) |
@@ -20,6 +20,10 @@ El BRD describe todo el negocio de FitZone (membresías, reservas, lista de espe
 ## Cómo se relacionan los artefactos
 
 ```mermaid
+---
+config:
+  theme: redux-color
+---
 flowchart LR
   BRD["BRD<br/>necesidades BN, reglas RN, historias US"] --> GH["Gherkin<br/>escenarios con etiquetas @RN"]
   BRD --> BPMN["BPMN<br/>procesos y decisiones"]
