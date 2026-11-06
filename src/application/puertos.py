@@ -1,0 +1,30 @@
+"""Puertos (interfaces) que la aplicación necesita; los implementa infrastructure.
+Así el dominio y los casos de uso no dependen de la base de datos (DIP)."""
+from __future__ import annotations
+
+from typing import Protocol
+
+from src.domain.entities import Plan, Socio
+from src.domain.events import EventoDeDominio
+from src.domain.solicitud import SolicitudDeMembresia
+
+
+class RepositorioSocios(Protocol):
+    def obtener(self, socio_id: str) -> Socio | None: ...
+
+
+class RepositorioPlanes(Protocol):
+    def obtener(self, plan_id: str) -> Plan | None: ...
+    def todos(self) -> dict[str, Plan]: ...
+
+
+class RepositorioSolicitudes(Protocol):
+    def obtener(self, solicitud_id: str) -> SolicitudDeMembresia | None: ...
+    def guardar(self, solicitud: SolicitudDeMembresia) -> None: ...
+    def listar(self) -> list[SolicitudDeMembresia]: ...
+    def vigentes_del_socio(self, socio_id: str) -> int: ...
+    def vigentes_por_plan(self) -> dict[str, int]: ...
+
+
+class PublicadorDeEventos(Protocol):
+    def publicar(self, eventos: list[EventoDeDominio]) -> None: ...

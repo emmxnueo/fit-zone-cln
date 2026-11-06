@@ -1,0 +1,21 @@
+﻿caso_id,operacion_id,accion,estado_inicial,estado_final,eventos,error,codigo_http,regla,mensaje
+FIT-S001,FIT-O001,completar,SOLICITADA,SOLICITADA,,TransicionInvalida,409,RN-41,No se puede 'vencer' desde SOLICITADA
+FIT-S002,FIT-O002,cancelar,SOLICITADA,CANCELADA,SolicitudCancelada,,200,,
+FIT-S003,FIT-O003,repetir_aprobacion,SOLICITADA,ACTIVA,MembresiaActivada,TransicionInvalida,409,RN-41,No se puede 'activar' desde ACTIVA
+FIT-S004,FIT-O004,saltar_estado,SOLICITADA,SOLICITADA,,TransicionInvalida,409,RN-41,No se puede 'vencer' desde SOLICITADA
+FIT-S005,FIT-O005,aprobar,SOLICITADA,SOLICITADA,,ReglaDeNegocioViolada,422,RN-37,"La solicitud no es procesable: socio inactivo, sin líneas o sin validar"
+FIT-S006,FIT-O006,completar,SOLICITADA,SOLICITADA,,TransicionInvalida,409,RN-41,No se puede 'vencer' desde SOLICITADA
+FIT-S007,FIT-O007,cancelar,SOLICITADA,CANCELADA,SolicitudCancelada,,200,,
+FIT-S008,FIT-O008,repetir_aprobacion,SOLICITADA,SOLICITADA,,ReglaDeNegocioViolada,422,RN-37,"La solicitud no es procesable: socio inactivo, sin líneas o sin validar"
+FIT-S009,FIT-O009,saltar_estado,SOLICITADA,SOLICITADA,,TransicionInvalida,409,RN-41,No se puede 'vencer' desde SOLICITADA
+FIT-S010,FIT-O010,aprobar,SOLICITADA,ACTIVA,MembresiaActivada,,200,,
+FIT-S011,FIT-O011,completar,SOLICITADA,SOLICITADA,,TransicionInvalida,409,RN-41,No se puede 'vencer' desde SOLICITADA
+FIT-S012,FIT-O012,cancelar,SOLICITADA,CANCELADA,SolicitudCancelada,,200,,
+FIT-S013,FIT-O013,repetir_aprobacion,SOLICITADA,SOLICITADA,,ReglaDeNegocioViolada,422,RN-37,"La solicitud no es procesable: socio inactivo, sin líneas o sin validar"
+FIT-S014,FIT-O014,saltar_estado,SOLICITADA,SOLICITADA,,TransicionInvalida,409,RN-41,No se puede 'vencer' desde SOLICITADA
+FIT-S015,FIT-O015,aprobar,SOLICITADA,SOLICITADA,,ReglaDeNegocioViolada,422,RN-38,La solicitud incluye un plan deshabilitado o inexistente
+FIT-S016,FIT-O016,completar,SOLICITADA,SOLICITADA,,TransicionInvalida,409,RN-41,No se puede 'vencer' desde SOLICITADA
+FIT-S017,FIT-O017,cancelar,SOLICITADA,CANCELADA,SolicitudCancelada,,200,,
+FIT-S018,FIT-O018,repetir_aprobacion,SOLICITADA,ACTIVA,MembresiaActivada,TransicionInvalida,409,RN-41,No se puede 'activar' desde ACTIVA
+FIT-S019,FIT-O019,saltar_estado,SOLICITADA,SOLICITADA,,TransicionInvalida,409,RN-41,No se puede 'vencer' desde SOLICITADA
+FIT-S020,FIT-O020,aprobar,SOLICITADA,SOLICITADA,,ReglaDeNegocioViolada,422,RN-38,La solicitud incluye un plan deshabilitado o inexistente
