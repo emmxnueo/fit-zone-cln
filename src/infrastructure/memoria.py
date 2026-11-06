@@ -3,8 +3,10 @@ Los repositorios PostgreSQL llegan en el paso de persistencia."""
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import date, datetime
 from typing import Callable
 
+from src.domain.clase import Clase
 from src.domain.entities import Plan, Socio
 from src.domain.events import EventoDeDominio
 from src.domain.solicitud import SolicitudDeMembresia
@@ -19,6 +21,9 @@ class RepositorioSociosMemoria:
 
     def obtener(self, socio_id: str) -> Socio | None:
         return self._d.get(socio_id)
+
+    def guardar(self, socio: Socio) -> None:
+        self._d[socio.id] = socio
 
 
 class RepositorioPlanesMemoria:
@@ -49,6 +54,13 @@ class RepositorioSolicitudesMemoria:
         """RN-03: cuenta membresías ACTIVA o SUSPENDIDA (congelada sigue siendo suya)."""
         return sum(1 for s in self._d.values() if s.socio_id == socio_id and s.estado in _VIGENTES)
 
+    def tiene_activa(self, socio_id: str) -> bool:
+        """RN-13: una membresía congelada no permite reservar ni ingresar."""
+        return any(
+            s.socio_id == socio_id and s.estado == EstadoMembresia.ACTIVA
+            for s in self._d.values()
+        )
+
     def vigentes_por_plan(self) -> dict[str, int]:
         """RN-39: ocupación de cupo por plan (solicitudes ACTIVA o SUSPENDIDA)."""
         cuenta: dict[str, int] = defaultdict(int)
@@ -57,6 +69,32 @@ class RepositorioSolicitudesMemoria:
                 for plan_id in {l.plan_id for l in s.lineas}:
                     cuenta[plan_id] += 1
         return dict(cuenta)
+
+
+class RepositorioClasesMemoria:
+    def __init__(self, clases: dict[str, Clase] | None = None) -> None:
+        self._d = dict(clases or {})
+
+    def obtener(self, clase_id: str) -> Clase | None:
+        return self._d.get(clase_id)
+
+    def guardar(self, clase: Clase) -> None:
+        self._d[clase.id] = clase
+
+    def listar(self) -> list[Clase]:
+        return sorted(self._d.values(), key=lambda c: (c.inicio, c.id))
+
+
+class RepositorioIngresosMemoria:
+    def __init__(self) -> None:
+        self._ingresos: list[tuple[str, datetime]] = []
+
+    def registrar(self, socio_id: str, momento: datetime) -> None:
+        self._ingresos.append((socio_id, momento))
+
+    def presentes_el(self, dia: date) -> set[str]:
+        """RN-18: presente es tener un ingreso registrado ese día."""
+        return {socio_id for socio_id, momento in self._ingresos if momento.date() == dia}
 
 
 class PublicadorEnMemoria:

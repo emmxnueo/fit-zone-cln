@@ -1,0 +1,132 @@
+"""API de clases, reservas, lista de espera, ingresos y sanciones."""
+from datetime import datetime, timedelta
+
+from src.api.dependencias import get_servicio_clases
+from src.application.clases import ServicioDeClases
+from src.infrastructure.csv_loader import cargar_paquete
+from src.infrastructure.reloj import RelojDelSistema
+
+_P = cargar_paquete()
+_ACTIVOS = [s for s in _P.socios.values() if s.activo]
+NORMALES = [s.id for s in _ACTIVOS if not s.es_premium]
+PREMIUM = next(s.id for s in _ACTIVOS if s.es_premium)
+PLAN = next(p.id for p in _P.planes.values() if p.habilitado and p.cupo >= 5)
+
+
+def con_membresia(api, socio):
+    r = api.post("/solicitudes", json={
+        "socio_id": socio, "validada": True, "lineas": [{"plan_id": PLAN, "cantidad": 1}],
+    })
+    assert api.post(f"/solicitudes/{r.json()['id']}/activar").status_code == 200
+    return socio
+
+
+def crear_clase(api, en=timedelta(days=1), capacidad=1, categoria="ESTANDAR"):
+    inicio = RelojDelSistema().ahora() + en
+    r = api.post("/clases", json={
+        "nombre": "Yoga", "categoria": categoria, "inicio": inicio.isoformat(),
+        "capacidad": capacidad,
+    })
+    assert r.status_code == 201
+    return r.json()
+
+
+def reservar(api, clase, socio):
+    return api.post(f"/clases/{clase['id']}/reservas", json={"socio_id": socio})
+
+
+def test_swagger_documenta_las_rutas_nuevas(api):
+    rutas = api.get("/openapi.json").json()["paths"]
+    assert "/clases/{clase_id}/reservas" in rutas
+    assert "/clases/procesar-reloj" in rutas
+    assert "/socios/{socio_id}/ingresos" in rutas
+
+
+def test_dependencia_por_defecto_entrega_el_servicio_de_clases():
+    assert isinstance(get_servicio_clases(), ServicioDeClases)
+
+
+def test_formato_y_reglas_al_crear_clase(api):
+    cuerpo = {"nombre": "Yoga", "categoria": "ESTANDAR", "inicio": "2026-12-01T18:00:00"}
+    assert api.post("/clases", json={**cuerpo, "capacidad": 0}).status_code == 422
+    assert api.post("/clases", json={**cuerpo, "capacidad": "diez"}).status_code == 400
+    assert api.post("/clases", json={**cuerpo, "capacidad": 1, "categoria": "X"}).status_code == 400
+    con_zona = {**cuerpo, "capacidad": 1, "inicio": "2026-12-01T18:00:00Z"}
+    assert api.post("/clases", json=con_zona).status_code == 400
+
+
+def test_reservar_y_lista_de_espera(api):
+    a, b = (con_membresia(api, s) for s in NORMALES[:2])
+    clase = crear_clase(api)
+    r = reservar(api, clase, a)
+    assert r.status_code == 201 and r.json()["resultado"] == "RESERVA_CONFIRMADA"
+    assert r.json()["clase"]["lugares_libres"] == 0
+    assert reservar(api, clase, a).status_code == 409
+    r = reservar(api, clase, b)
+    assert r.json()["resultado"] == "EN_LISTA_DE_ESPERA"
+    r = reservar(api, clase, b)
+    assert r.status_code == 409 and r.json()["regla"] == "RN-24"
+
+
+def test_sin_membresia_es_422_y_sin_socio_es_404(api):
+    clase = crear_clase(api)
+    r = reservar(api, clase, NORMALES[0])
+    assert r.status_code == 422 and r.json()["regla"] == "RN-13"
+    assert reservar(api, clase, "NADIE").status_code == 404
+    assert api.get("/clases/NADA").status_code == 404
+
+
+def test_clase_premium_y_etiquetas(api):
+    normal, premium = con_membresia(api, NORMALES[0]), con_membresia(api, PREMIUM)
+    clase = crear_clase(api, categoria="PREMIUM", capacidad=5)
+    assert reservar(api, clase, normal).status_code == 422
+    assert reservar(api, clase, premium).status_code == 201
+    url = f"/clases/{clase['id']}"
+    assert api.get(url, params={"socio_id": premium}).json()["etiqueta"] == "Incluida en tu membresía"
+    assert "Costo adicional" in api.get("/clases", params={"socio_id": normal}).json()[0]["etiqueta"]
+
+
+def test_cancelar_ofrecer_y_confirmar(api):
+    a, b = (con_membresia(api, s) for s in NORMALES[:2])
+    clase = crear_clase(api)
+    rid = reservar(api, clase, a).json()["id"]
+    reservar(api, clase, b)
+    r = api.post(f"/clases/{clase['id']}/reservas/{rid}/cancelar")
+    assert r.status_code == 200 and r.json()["lista_espera"][0]["estado"] == "OFERTADA"
+    assert api.post(f"/clases/{clase['id']}/reservas/{rid}/cancelar").status_code == 409
+    assert api.post(f"/clases/{clase['id']}/reservas/NADA/cancelar").status_code == 404
+    url = f"/clases/{clase['id']}/oferta/confirmar"
+    assert api.post(url, json={"socio_id": a}).status_code == 409
+    assert api.post(url, json={"socio_id": b}).json()["estado"] == "CONFIRMADA"
+
+
+def test_cancelacion_tardia_aparece_como_falta(api):
+    a = con_membresia(api, NORMALES[0])
+    clase = crear_clase(api, en=timedelta(minutes=30))
+    rid = reservar(api, clase, a).json()["id"]
+    r = api.post(f"/clases/{clase['id']}/reservas/{rid}/cancelar")
+    assert r.json()["reservas"][0]["estado"] == "CANCELADA_TARDE"
+    faltas = api.get(f"/socios/{a}").json()["faltas"]
+    assert [f["motivo"] for f in faltas] == ["CANCELACION_TARDIA"]
+
+
+def test_ingreso_y_tolerancia_con_el_reloj(api):
+    a, b = (con_membresia(api, s) for s in NORMALES[:2])
+    clase = crear_clase(api, en=timedelta(hours=2))
+    reservar(api, clase, a)
+    reservar(api, clase, b)
+    assert api.post(f"/socios/{b}/ingresos").status_code == 201
+    ahora = datetime.fromisoformat(clase["inicio"]) + timedelta(minutes=11)
+    r = api.post("/clases/procesar-reloj", json={"ahora": ahora.isoformat()})
+    # la clase puede caer al día siguiente cerca de medianoche: entonces B no está presente
+    assert r.status_code == 200 and r.json()["no_shows"] == 1
+    assert api.post("/clases/procesar-reloj").status_code == 200
+    eventos = [e["evento"] for e in api.get("/eventos").json()]
+    assert "NoShowRegistrado" in eventos and "FaltaRegistrada" in eventos
+
+
+def test_ingreso_sin_membresia_es_422(api):
+    r = api.post(f"/socios/{NORMALES[0]}/ingresos")
+    assert r.status_code == 422 and r.json()["regla"] == "RN-05"
+    assert api.post("/socios/NADIE/ingresos").status_code == 404
+    assert api.get("/socios/NADIE").status_code == 404

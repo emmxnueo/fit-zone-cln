@@ -1,4 +1,4 @@
-"""Domain Events del ciclo de vida de la membresía (BRD sección 13)."""
+"""Domain Events de la membresía, las reservas y las sanciones (BRD sección 13)."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -11,8 +11,9 @@ def _ahora() -> datetime:
 
 @dataclass(frozen=True, kw_only=True)
 class EventoDeDominio:
-    solicitud_id: str
     socio_id: str
+    solicitud_id: str = ""
+    clase_id: str = ""
     ocurrido_en: datetime = field(default_factory=_ahora)
 
     @property
@@ -52,4 +53,54 @@ class MembresiaDadaDeBaja(EventoDeDominio):
 
 @dataclass(frozen=True, kw_only=True)
 class SolicitudCancelada(EventoDeDominio):
+    pass
+
+
+@dataclass(frozen=True, kw_only=True)
+class ReservaConfirmada(EventoDeDominio):
+    reserva_id: str = ""
+
+
+@dataclass(frozen=True, kw_only=True)
+class SocioEnListaDeEspera(EventoDeDominio):
+    pass
+
+
+@dataclass(frozen=True, kw_only=True)
+class ReservaCancelada(EventoDeDominio):
+    reserva_id: str = ""
+
+
+@dataclass(frozen=True, kw_only=True)
+class CancelacionTardiaRegistrada(EventoDeDominio):
+    reserva_id: str = ""
+
+
+@dataclass(frozen=True, kw_only=True)
+class NoShowRegistrado(EventoDeDominio):
+    reserva_id: str = ""
+
+
+@dataclass(frozen=True, kw_only=True)
+class LugarOfrecido(EventoDeDominio):
+    pass
+
+
+@dataclass(frozen=True, kw_only=True)
+class OfertaExpirada(EventoDeDominio):
+    pass
+
+
+@dataclass(frozen=True, kw_only=True)
+class LugarAsignado(EventoDeDominio):
+    reserva_id: str = ""
+
+
+@dataclass(frozen=True, kw_only=True)
+class FaltaRegistrada(EventoDeDominio):
+    pass
+
+
+@dataclass(frozen=True, kw_only=True)
+class SancionAplicada(EventoDeDominio):
     pass

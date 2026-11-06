@@ -1,8 +1,10 @@
-"""Value Objects del módulo de contratación de membresías (RN-38)."""
+"""Value Objects de la contratación de membresías (RN-38) y de las faltas (RN-25)."""
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
+from enum import Enum
 
 from .errors import ReglaDeNegocioViolada
 
@@ -64,3 +66,18 @@ class LineaSolicitud:
     @property
     def subtotal(self) -> Dinero:
         return self.precio_unitario.por(self.cantidad.valor)
+
+
+class MotivoFalta(str, Enum):
+    NO_SHOW = "NO_SHOW"
+    CANCELACION_TARDIA = "CANCELACION_TARDIA"
+
+
+@dataclass(frozen=True)
+class Falta:
+    """RN-25. `consumida` indica que ya generó una sanción; sigue en el historial (RN-28)."""
+
+    clase_id: str
+    momento: datetime
+    motivo: MotivoFalta
+    consumida: bool = False

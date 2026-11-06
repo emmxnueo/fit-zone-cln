@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Mapping
+from datetime import datetime
+from enum import Enum
+from typing import TYPE_CHECKING, Any, Mapping
 
 from .entities import Plan, Socio
 from .value_objects import Dinero
@@ -24,9 +26,24 @@ class ContextoSolicitud:
     membresias_activas_del_socio: int = 0
 
 
+class CategoriaClase(str, Enum):
+    ESTANDAR = "ESTANDAR"
+    PREMIUM = "PREMIUM"
+
+
+@dataclass(frozen=True)
+class ContextoReserva:
+    """Todo lo que las Specifications necesitan para evaluar una reserva (RN-13)."""
+
+    socio: Socio
+    categoria: CategoriaClase
+    membresia_vigente: bool
+    ahora: datetime
+
+
 class Specification(ABC):
     @abstractmethod
-    def is_satisfied_by(self, ctx: ContextoSolicitud) -> bool: ...
+    def is_satisfied_by(self, ctx: Any) -> bool: ...
 
     def and_(self, otra: "Specification") -> "Specification":
         return _And(self, otra)
@@ -49,7 +66,7 @@ class _And(Specification):
     def __init__(self, a: Specification, b: Specification) -> None:
         self.a, self.b = a, b
 
-    def is_satisfied_by(self, ctx: ContextoSolicitud) -> bool:
+    def is_satisfied_by(self, ctx: Any) -> bool:
         return self.a.is_satisfied_by(ctx) and self.b.is_satisfied_by(ctx)
 
     def __repr__(self) -> str:
@@ -60,7 +77,7 @@ class _Or(Specification):
     def __init__(self, a: Specification, b: Specification) -> None:
         self.a, self.b = a, b
 
-    def is_satisfied_by(self, ctx: ContextoSolicitud) -> bool:
+    def is_satisfied_by(self, ctx: Any) -> bool:
         return self.a.is_satisfied_by(ctx) or self.b.is_satisfied_by(ctx)
 
     def __repr__(self) -> str:
@@ -71,7 +88,7 @@ class _Not(Specification):
     def __init__(self, a: Specification) -> None:
         self.a = a
 
-    def is_satisfied_by(self, ctx: ContextoSolicitud) -> bool:
+    def is_satisfied_by(self, ctx: Any) -> bool:
         return not self.a.is_satisfied_by(ctx)
 
     def __repr__(self) -> str:
@@ -80,7 +97,9 @@ class _Not(Specification):
 
 # --- Specifications simples -------------------------------------------------
 class SocioActivo(Specification):
-    def is_satisfied_by(self, ctx: ContextoSolicitud) -> bool:
+    """Aplica tanto a ContextoSolicitud como a ContextoReserva."""
+
+    def is_satisfied_by(self, ctx: ContextoSolicitud | ContextoReserva) -> bool:
         return ctx.socio.activo
 
 
@@ -160,4 +179,36 @@ class BeneficioDeReferencia(Specification):
         self._spec = SocioPremium() & TotalMinimo(self.UMBRAL) & ~CortesiaActiva()
 
     def is_satisfied_by(self, ctx: ContextoSolicitud) -> bool:
+        return self._spec.is_satisfied_by(ctx)
+
+
+# --- Specifications de reservas (RN-13, ElegibilidadDeReserva de la Act3) ----
+class MembresiaVigente(Specification):
+    def is_satisfied_by(self, ctx: ContextoReserva) -> bool:
+        return ctx.membresia_vigente
+
+
+class PlanIncluyeCategoria(Specification):
+    """RN-14: las clases Estándar van incluidas; las Premium, solo en el plan Premium."""
+
+    def is_satisfied_by(self, ctx: ContextoReserva) -> bool:
+        return ctx.categoria == CategoriaClase.ESTANDAR or ctx.socio.es_premium
+
+
+class SinSancionActiva(Specification):
+    """RN-26: una sanción activa bloquea las reservas, no el acceso al gimnasio."""
+
+    def is_satisfied_by(self, ctx: ContextoReserva) -> bool:
+        return not ctx.socio.tiene_sancion_activa(ctx.ahora)
+
+
+class ElegibleParaReservar(Specification):
+    """RN-13: socio activo AND membresía vigente AND plan con la categoría AND sin sanción."""
+
+    def __init__(self) -> None:
+        self._spec = (
+            SocioActivo() & MembresiaVigente() & PlanIncluyeCategoria() & SinSancionActiva()
+        )
+
+    def is_satisfied_by(self, ctx: ContextoReserva) -> bool:
         return self._spec.is_satisfied_by(ctx)

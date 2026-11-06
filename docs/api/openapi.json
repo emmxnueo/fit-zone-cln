@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "FitZone - Componentes de Lógica de Negocio",
-    "description": "API del PIA (Equipo 11, FIME-UANL): contratación de membresías de FitZone.\n\nCódigos HTTP: **201** al crear · **200** lecturas y cambios · **400** formato inválido · **404** no existe · **409** conflicto de estado, cupo o membresía activa · **422** regla de negocio violada.",
-    "version": "0.2.0"
+    "description": "API del PIA (Equipo 11, FIME-UANL): membresías, clases, reservas, lista de espera y sanciones de FitZone.\n\nCódigos HTTP: **201** al crear · **200** lecturas y cambios · **400** formato inválido · **404** no existe · **409** conflicto de estado, cupo o membresía activa · **422** regla de negocio violada.",
+    "version": "0.3.0"
   },
   "paths": {
     "/health": {
@@ -807,6 +807,589 @@
         }
       }
     },
+    "/clases": {
+      "post": {
+        "tags": [
+          "Clases y reservas"
+        ],
+        "summary": "Crear una clase",
+        "operationId": "crear_clase_clases_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaseIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaseOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Formato de la solicitud inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regla de negocio violada (RN-xx)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Clases y reservas"
+        ],
+        "summary": "Catálogo de clases",
+        "description": "Con `socio_id` agrega la etiqueta de cada clase para ese socio (RN-14).",
+        "operationId": "listar_clases_clases_get",
+        "parameters": [
+          {
+            "name": "socio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Socio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClaseOut"
+                  },
+                  "title": "Response Listar Clases Clases Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La clase, la reserva o el socio no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clases/procesar-reloj": {
+      "post": {
+        "tags": [
+          "Clases y reservas"
+        ],
+        "summary": "Ejecutar el reloj del sistema",
+        "description": "Expira ofertas (RN-20) y aplica la tolerancia de retraso (RN-17, RN-21). Lo dispara una tarea programada; no hay un proceso interno que lo llame.",
+        "operationId": "procesar_reloj_clases_procesar_reloj_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RelojIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Datos"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenRelojOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Formato de la solicitud inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clases/{clase_id}": {
+      "get": {
+        "tags": [
+          "Clases y reservas"
+        ],
+        "summary": "Consultar una clase",
+        "operationId": "obtener_clase_clases__clase_id__get",
+        "parameters": [
+          {
+            "name": "clase_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clase Id"
+            }
+          },
+          {
+            "name": "socio_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Socio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaseOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La clase, la reserva o el socio no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clases/{clase_id}/reservas": {
+      "post": {
+        "tags": [
+          "Clases y reservas"
+        ],
+        "summary": "Reservar un lugar",
+        "description": "Exige RN-13. Si no hay lugar, el socio entra a la lista de espera.",
+        "operationId": "reservar_clases__clase_id__reservas_post",
+        "parameters": [
+          {
+            "name": "clase_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clase Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SocioIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoReservaOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Formato de la solicitud inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La clase, la reserva o el socio no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Clase iniciada, reserva repetida u oferta inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regla de negocio violada (RN-xx)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clases/{clase_id}/reservas/{reserva_id}/cancelar": {
+      "post": {
+        "tags": [
+          "Clases y reservas"
+        ],
+        "summary": "Cancelar una reserva",
+        "description": "Con menos de 1 h cuenta como falta (RN-15, RN-16).",
+        "operationId": "cancelar_reserva_clases__clase_id__reservas__reserva_id__cancelar_post",
+        "parameters": [
+          {
+            "name": "clase_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clase Id"
+            }
+          },
+          {
+            "name": "reserva_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Reserva Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaseOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La clase, la reserva o el socio no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Clase iniciada, reserva repetida u oferta inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clases/{clase_id}/oferta/confirmar": {
+      "post": {
+        "tags": [
+          "Clases y reservas"
+        ],
+        "summary": "Confirmar la oferta de lugar",
+        "description": "Se acepta hasta los 15 minutos exactos (RN-20).",
+        "operationId": "confirmar_oferta_clases__clase_id__oferta_confirmar_post",
+        "parameters": [
+          {
+            "name": "clase_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clase Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SocioIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReservaOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Formato de la solicitud inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La clase, la reserva o el socio no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Clase iniciada, reserva repetida u oferta inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regla de negocio violada (RN-xx)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/socios/{socio_id}": {
+      "get": {
+        "tags": [
+          "Socios"
+        ],
+        "summary": "Consultar faltas y sanción",
+        "operationId": "obtener_socio_socios__socio_id__get",
+        "parameters": [
+          {
+            "name": "socio_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Socio Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SocioOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El socio no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/socios/{socio_id}/ingresos": {
+      "post": {
+        "tags": [
+          "Socios"
+        ],
+        "summary": "Registrar un ingreso",
+        "description": "Solo con membresía vigente (RN-05). Cuenta como presente (RN-18).",
+        "operationId": "registrar_ingreso_socios__socio_id__ingresos_post",
+        "parameters": [
+          {
+            "name": "socio_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Socio Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngresoOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El socio no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regla de negocio violada (RN-xx)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/planes": {
       "get": {
         "tags": [
@@ -860,6 +1443,141 @@
   },
   "components": {
     "schemas": {
+      "CategoriaClase": {
+        "type": "string",
+        "enum": [
+          "ESTANDAR",
+          "PREMIUM"
+        ],
+        "title": "CategoriaClase"
+      },
+      "ClaseIn": {
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Nombre",
+            "examples": [
+              "Yoga"
+            ]
+          },
+          "categoria": {
+            "$ref": "#/components/schemas/CategoriaClase"
+          },
+          "inicio": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Inicio",
+            "description": "Hora local de Monterrey, sin zona.",
+            "examples": [
+              "2026-12-01T18:00:00"
+            ]
+          },
+          "capacidad": {
+            "type": "integer",
+            "title": "Capacidad",
+            "description": "Entero >= 1 (RN-11).",
+            "examples": [
+              20
+            ]
+          },
+          "instructor": {
+            "type": "string",
+            "title": "Instructor",
+            "default": ""
+          },
+          "salon": {
+            "type": "string",
+            "title": "Salon",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "nombre",
+          "categoria",
+          "inicio",
+          "capacidad"
+        ],
+        "title": "ClaseIn"
+      },
+      "ClaseOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "nombre": {
+            "type": "string",
+            "title": "Nombre"
+          },
+          "categoria": {
+            "type": "string",
+            "title": "Categoria"
+          },
+          "inicio": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Inicio"
+          },
+          "capacidad": {
+            "type": "integer",
+            "title": "Capacidad"
+          },
+          "instructor": {
+            "type": "string",
+            "title": "Instructor"
+          },
+          "salon": {
+            "type": "string",
+            "title": "Salon"
+          },
+          "lugares_libres": {
+            "type": "integer",
+            "title": "Lugares Libres"
+          },
+          "etiqueta": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etiqueta",
+            "description": "Solo si se consulta con `socio_id` (RN-14)."
+          },
+          "reservas": {
+            "items": {
+              "$ref": "#/components/schemas/ReservaOut"
+            },
+            "type": "array",
+            "title": "Reservas"
+          },
+          "lista_espera": {
+            "items": {
+              "$ref": "#/components/schemas/EntradaEsperaOut"
+            },
+            "type": "array",
+            "title": "Lista Espera"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nombre",
+          "categoria",
+          "inicio",
+          "capacidad",
+          "instructor",
+          "salon",
+          "lugares_libres",
+          "reservas",
+          "lista_espera"
+        ],
+        "title": "ClaseOut"
+      },
       "DecisionIn": {
         "properties": {
           "aprobada": {
@@ -873,6 +1591,53 @@
           "aprobada"
         ],
         "title": "DecisionIn"
+      },
+      "EntradaEsperaOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "socio_id": {
+            "type": "string",
+            "title": "Socio Id"
+          },
+          "orden": {
+            "type": "integer",
+            "title": "Orden"
+          },
+          "registrada_en": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Registrada En"
+          },
+          "estado": {
+            "type": "string",
+            "title": "Estado"
+          },
+          "ofertada_en": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ofertada En"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "socio_id",
+          "orden",
+          "registrada_en",
+          "estado",
+          "ofertada_en"
+        ],
+        "title": "EntradaEsperaOut"
       },
       "ErrorOut": {
         "properties": {
@@ -951,6 +1716,10 @@
             "type": "string",
             "title": "Solicitud Id"
           },
+          "clase_id": {
+            "type": "string",
+            "title": "Clase Id"
+          },
           "socio_id": {
             "type": "string",
             "title": "Socio Id"
@@ -965,10 +1734,40 @@
         "required": [
           "evento",
           "solicitud_id",
+          "clase_id",
           "socio_id",
           "ocurrido_en"
         ],
         "title": "EventoOut"
+      },
+      "FaltaOut": {
+        "properties": {
+          "clase_id": {
+            "type": "string",
+            "title": "Clase Id"
+          },
+          "momento": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Momento"
+          },
+          "motivo": {
+            "type": "string",
+            "title": "Motivo"
+          },
+          "consumida": {
+            "type": "boolean",
+            "title": "Consumida"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clase_id",
+          "momento",
+          "motivo",
+          "consumida"
+        ],
+        "title": "FaltaOut"
       },
       "HTTPValidationError": {
         "properties": {
@@ -982,6 +1781,25 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "IngresoOut": {
+        "properties": {
+          "socio_id": {
+            "type": "string",
+            "title": "Socio Id"
+          },
+          "momento": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Momento"
+          }
+        },
+        "type": "object",
+        "required": [
+          "socio_id",
+          "momento"
+        ],
+        "title": "IngresoOut"
       },
       "LineaIn": {
         "properties": {
@@ -1088,6 +1906,171 @@
           "duracion_meses"
         ],
         "title": "PlanOut"
+      },
+      "RelojIn": {
+        "properties": {
+          "ahora": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ahora",
+            "description": "Momento a evaluar. Si se omite, se usa el reloj del sistema; sirve para demostrar la tolerancia y la expiración sin esperar."
+          }
+        },
+        "type": "object",
+        "title": "RelojIn"
+      },
+      "ReservaOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "socio_id": {
+            "type": "string",
+            "title": "Socio Id"
+          },
+          "creada_en": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Creada En"
+          },
+          "estado": {
+            "type": "string",
+            "title": "Estado"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "socio_id",
+          "creada_en",
+          "estado"
+        ],
+        "title": "ReservaOut"
+      },
+      "ResultadoReservaOut": {
+        "properties": {
+          "resultado": {
+            "type": "string",
+            "title": "Resultado",
+            "description": "RESERVA_CONFIRMADA o EN_LISTA_DE_ESPERA (RN-13)."
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "clase": {
+            "$ref": "#/components/schemas/ClaseOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resultado",
+          "id",
+          "clase"
+        ],
+        "title": "ResultadoReservaOut"
+      },
+      "ResumenRelojOut": {
+        "properties": {
+          "ofertas_expiradas": {
+            "type": "integer",
+            "title": "Ofertas Expiradas"
+          },
+          "lugares_ofrecidos": {
+            "type": "integer",
+            "title": "Lugares Ofrecidos"
+          },
+          "no_shows": {
+            "type": "integer",
+            "title": "No Shows"
+          },
+          "lugares_asignados": {
+            "type": "integer",
+            "title": "Lugares Asignados"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ofertas_expiradas",
+          "lugares_ofrecidos",
+          "no_shows",
+          "lugares_asignados"
+        ],
+        "title": "ResumenRelojOut"
+      },
+      "SocioIn": {
+        "properties": {
+          "socio_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Socio Id",
+            "examples": [
+              "FIT-C001"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "socio_id"
+        ],
+        "title": "SocioIn"
+      },
+      "SocioOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "nombre": {
+            "type": "string",
+            "title": "Nombre"
+          },
+          "es_premium": {
+            "type": "boolean",
+            "title": "Es Premium"
+          },
+          "activo": {
+            "type": "boolean",
+            "title": "Activo"
+          },
+          "faltas": {
+            "items": {
+              "$ref": "#/components/schemas/FaltaOut"
+            },
+            "type": "array",
+            "title": "Faltas"
+          },
+          "sancion_hasta": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sancion Hasta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nombre",
+          "es_premium",
+          "activo",
+          "faltas",
+          "sancion_hasta"
+        ],
+        "title": "SocioOut"
       },
       "SolicitudIn": {
         "properties": {

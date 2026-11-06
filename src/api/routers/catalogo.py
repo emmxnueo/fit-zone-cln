@@ -26,7 +26,7 @@ def listar_planes(svc: Servicio):
             summary="Domain Events publicados (para la demostración)")
 def listar_eventos(svc: Servicio):
     return [
-        EventoOut(evento=e.nombre, solicitud_id=e.solicitud_id,
+        EventoOut(evento=e.nombre, solicitud_id=e.solicitud_id, clase_id=e.clase_id,
                   socio_id=e.socio_id, ocurrido_en=e.ocurrido_en)
         for e in svc.eventos()
     ]

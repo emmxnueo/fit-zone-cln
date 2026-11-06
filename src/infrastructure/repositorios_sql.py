@@ -5,21 +5,42 @@ rollback y no queda nada a medias.
 """
 from __future__ import annotations
 
-from sqlalchemy import distinct, func, select
+from datetime import date, datetime, time, timedelta
+
+from sqlalchemy import delete, distinct, func, select
 from sqlalchemy.orm import Session, selectinload, sessionmaker
 
+from src.domain.clase import Clase, EntradaListaEspera, EstadoEntrada, Reserva
 from src.domain.entities import Plan, Socio
 from src.domain.solicitud import SolicitudDeMembresia
-from src.domain.state_machine import EstadoMembresia
-from src.domain.value_objects import Cantidad, Dinero, LineaSolicitud
+from src.domain.specifications import CategoriaClase
+from src.domain.state_machine import EstadoMembresia, EstadoReserva
+from src.domain.value_objects import Cantidad, Dinero, Falta, LineaSolicitud, MotivoFalta
 
-from .db import LineaRow, PlanRow, SocioRow, SolicitudRow
+from .db import (
+    ClaseRow,
+    EntradaEsperaRow,
+    FaltaRow,
+    IngresoRow,
+    LineaRow,
+    PlanRow,
+    ReservaRow,
+    SancionRow,
+    SocioRow,
+    SolicitudRow,
+)
 
 _VIGENTES = (EstadoMembresia.ACTIVA.value, EstadoMembresia.SUSPENDIDA.value)
 
 
-def _a_socio(r: SocioRow) -> Socio:
-    return Socio(r.id, r.nombre, es_premium=r.es_premium, activo=r.activo, ciudad=r.ciudad)
+def _a_socio(r: SocioRow, faltas: list[FaltaRow], sancion: SancionRow | None) -> Socio:
+    return Socio(
+        r.id, r.nombre, es_premium=r.es_premium, activo=r.activo, ciudad=r.ciudad,
+        faltas=[
+            Falta(f.clase_id, f.momento, MotivoFalta(f.motivo), f.consumida) for f in faltas
+        ],
+        sancion_hasta=sancion.hasta if sancion else None,
+    )
 
 
 def _a_plan(r: PlanRow) -> Plan:
@@ -45,6 +66,22 @@ def _a_solicitud(r: SolicitudRow) -> SolicitudDeMembresia:
     )
 
 
+def _a_clase(r: ClaseRow) -> Clase:
+    return Clase(
+        r.id, r.nombre, CategoriaClase(r.categoria), r.inicio, r.capacidad,
+        instructor=r.instructor, salon=r.salon,
+        reservas=[
+            Reserva(x.id, x.socio_id, x.creada_en, EstadoReserva(x.estado)) for x in r.reservas
+        ],
+        lista_espera=[
+            EntradaListaEspera(
+                x.id, x.socio_id, x.orden, x.registrada_en, EstadoEntrada(x.estado), x.ofertada_en
+            )
+            for x in r.lista_espera
+        ],
+    )
+
+
 class RepositorioSociosSQL:
     def __init__(self, sesiones: sessionmaker[Session]) -> None:
         self._sesiones = sesiones
@@ -52,7 +89,24 @@ class RepositorioSociosSQL:
     def obtener(self, socio_id: str) -> Socio | None:
         with self._sesiones() as s:
             fila = s.get(SocioRow, socio_id)
-            return _a_socio(fila) if fila else None
+            if fila is None:
+                return None
+            faltas = s.scalars(
+                select(FaltaRow).where(FaltaRow.socio_id == socio_id).order_by(FaltaRow.id)
+            ).all()
+            return _a_socio(fila, list(faltas), s.get(SancionRow, socio_id))
+
+    def guardar(self, socio: Socio) -> None:
+        """Solo persiste lo que cambia en el Socio: su historial de faltas y su sanción."""
+        with self._sesiones.begin() as s:
+            s.execute(delete(FaltaRow).where(FaltaRow.socio_id == socio.id))
+            s.add_all(
+                FaltaRow(socio_id=socio.id, clase_id=f.clase_id, momento=f.momento,
+                         motivo=f.motivo.value, consumida=f.consumida)
+                for f in socio.faltas
+            )
+            if socio.sancion_hasta is not None:
+                s.merge(SancionRow(socio_id=socio.id, hasta=socio.sancion_hasta))
 
 
 class RepositorioPlanesSQL:
@@ -121,6 +175,18 @@ class RepositorioSolicitudesSQL:
                 .where(SolicitudRow.socio_id == socio_id, SolicitudRow.estado.in_(_VIGENTES))
             ) or 0
 
+    def tiene_activa(self, socio_id: str) -> bool:
+        """RN-13: una membresía congelada no permite reservar ni ingresar."""
+        with self._sesiones() as s:
+            return (s.scalar(
+                select(func.count())
+                .select_from(SolicitudRow)
+                .where(
+                    SolicitudRow.socio_id == socio_id,
+                    SolicitudRow.estado == EstadoMembresia.ACTIVA.value,
+                )
+            ) or 0) > 0
+
     def vigentes_por_plan(self) -> dict[str, int]:
         """RN-39: ocupación de cupo por plan (solicitudes ACTIVA o SUSPENDIDA)."""
         with self._sesiones() as s:
@@ -131,3 +197,73 @@ class RepositorioSolicitudesSQL:
                 .group_by(LineaRow.plan_id)
             )
             return {plan_id: cuenta for plan_id, cuenta in filas}
+
+
+class RepositorioClasesSQL:
+    def __init__(self, sesiones: sessionmaker[Session]) -> None:
+        self._sesiones = sesiones
+
+    def _consulta(self):
+        return select(ClaseRow).options(
+            selectinload(ClaseRow.reservas), selectinload(ClaseRow.lista_espera)
+        )
+
+    def obtener(self, clase_id: str) -> Clase | None:
+        with self._sesiones() as s:
+            fila = s.scalars(self._consulta().where(ClaseRow.id == clase_id)).first()
+            return _a_clase(fila) if fila else None
+
+    def listar(self) -> list[Clase]:
+        with self._sesiones() as s:
+            return [_a_clase(f) for f in s.scalars(self._consulta().order_by(ClaseRow.inicio, ClaseRow.id))]
+
+    def guardar(self, clase: Clase) -> None:
+        with self._sesiones.begin() as s:  # commit al salir, rollback si falla
+            fila = s.get(ClaseRow, clase.id)
+            if fila is None:
+                fila = ClaseRow(id=clase.id)
+                s.add(fila)
+            fila.nombre = clase.nombre
+            fila.categoria = clase.categoria.value
+            fila.inicio = clase.inicio
+            fila.capacidad = clase.capacidad
+            fila.instructor = clase.instructor
+            fila.salon = clase.salon
+            reservas = {r.id: r for r in fila.reservas}
+            for r in clase.reservas:
+                if r.id in reservas:
+                    reservas[r.id].estado = r.estado.value
+                else:
+                    fila.reservas.append(ReservaRow(
+                        id=r.id, socio_id=r.socio_id, creada_en=r.creada_en, estado=r.estado.value
+                    ))
+            entradas = {e.id: e for e in fila.lista_espera}
+            for e in clase.lista_espera:
+                if e.id in entradas:
+                    entradas[e.id].estado = e.estado.value
+                    entradas[e.id].ofertada_en = e.ofertada_en
+                else:
+                    fila.lista_espera.append(EntradaEsperaRow(
+                        id=e.id, socio_id=e.socio_id, orden=e.orden,
+                        registrada_en=e.registrada_en, estado=e.estado.value,
+                        ofertada_en=e.ofertada_en,
+                    ))
+
+
+class RepositorioIngresosSQL:
+    def __init__(self, sesiones: sessionmaker[Session]) -> None:
+        self._sesiones = sesiones
+
+    def registrar(self, socio_id: str, momento: datetime) -> None:
+        with self._sesiones.begin() as s:
+            s.add(IngresoRow(socio_id=socio_id, momento=momento))
+
+    def presentes_el(self, dia: date) -> set[str]:
+        """RN-18: presente es tener un ingreso registrado ese día."""
+        desde = datetime.combine(dia, time.min)
+        with self._sesiones() as s:
+            return set(s.scalars(
+                select(IngresoRow.socio_id).where(
+                    IngresoRow.momento >= desde, IngresoRow.momento < desde + timedelta(days=1)
+                )
+            ))

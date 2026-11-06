@@ -5,10 +5,19 @@ conoce. Los repositorios de `repositorios_sql.py` traducen entre ambos mundos.
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, ForeignKey, Integer, Numeric, String, create_engine
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    create_engine,
+)
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -67,6 +76,68 @@ class LineaRow(Base):
     precio_unitario: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     cantidad: Mapped[int] = mapped_column(Integer)
     solicitud: Mapped[SolicitudRow] = relationship(back_populates="lineas")
+
+
+class ClaseRow(Base):
+    __tablename__ = "clases"
+    id: Mapped[str] = mapped_column(String(20), primary_key=True)
+    nombre: Mapped[str] = mapped_column(String(120))
+    categoria: Mapped[str] = mapped_column(String(20))
+    inicio: Mapped[datetime] = mapped_column(DateTime, index=True)
+    capacidad: Mapped[int] = mapped_column(Integer)
+    instructor: Mapped[str] = mapped_column(String(120), default="")
+    salon: Mapped[str] = mapped_column(String(80), default="")
+    reservas: Mapped[list["ReservaRow"]] = relationship(
+        cascade="all, delete-orphan", order_by="ReservaRow.creada_en"
+    )
+    lista_espera: Mapped[list["EntradaEsperaRow"]] = relationship(
+        cascade="all, delete-orphan", order_by="EntradaEsperaRow.orden"
+    )
+
+
+class ReservaRow(Base):
+    __tablename__ = "reservas"
+    id: Mapped[str] = mapped_column(String(20), primary_key=True)
+    clase_id: Mapped[str] = mapped_column(ForeignKey("clases.id"), index=True)
+    socio_id: Mapped[str] = mapped_column(ForeignKey("socios.id"), index=True)
+    creada_en: Mapped[datetime] = mapped_column(DateTime)
+    estado: Mapped[str] = mapped_column(String(20))
+
+
+class EntradaEsperaRow(Base):
+    __tablename__ = "lista_espera"
+    id: Mapped[str] = mapped_column(String(20), primary_key=True)
+    clase_id: Mapped[str] = mapped_column(ForeignKey("clases.id"), index=True)
+    socio_id: Mapped[str] = mapped_column(ForeignKey("socios.id"), index=True)
+    orden: Mapped[int] = mapped_column(Integer)
+    registrada_en: Mapped[datetime] = mapped_column(DateTime)
+    estado: Mapped[str] = mapped_column(String(20))
+    ofertada_en: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class IngresoRow(Base):
+    __tablename__ = "ingresos"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    socio_id: Mapped[str] = mapped_column(ForeignKey("socios.id"), index=True)
+    momento: Mapped[datetime] = mapped_column(DateTime, index=True)
+
+
+# Faltas y sanciones van en tablas propias, no en `socios`: `create_all` no agrega
+# columnas a una tabla existente y la base desplegada no tiene migraciones.
+class FaltaRow(Base):
+    __tablename__ = "faltas"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    socio_id: Mapped[str] = mapped_column(ForeignKey("socios.id"), index=True)
+    clase_id: Mapped[str] = mapped_column(ForeignKey("clases.id"))
+    momento: Mapped[datetime] = mapped_column(DateTime)
+    motivo: Mapped[str] = mapped_column(String(20))
+    consumida: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class SancionRow(Base):
+    __tablename__ = "sanciones"
+    socio_id: Mapped[str] = mapped_column(ForeignKey("socios.id"), primary_key=True)
+    hasta: Mapped[datetime] = mapped_column(DateTime)
 
 
 def normalizar_url(url: str) -> str:

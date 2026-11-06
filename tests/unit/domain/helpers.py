@@ -23,3 +23,16 @@ def contexto(s=None, activo=True, premium=False, planes=None, ocupacion=None, ac
     socio = Socio("S1", "Socio", es_premium=premium, activo=activo)
     planes = planes or {l.plan_id: plan(l.plan_id) for l in s.lineas}
     return ContextoSolicitud(s, socio, planes, ocupacion or {}, activas)
+
+
+class RelojFijo:
+    """Reloj de pruebas: `fijar` simula el paso del tiempo."""
+
+    def __init__(self, momento):
+        self.momento = momento
+
+    def ahora(self):
+        return self.momento
+
+    def fijar(self, momento):
+        self.momento = momento

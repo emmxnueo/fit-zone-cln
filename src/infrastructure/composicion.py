@@ -1,4 +1,4 @@
-"""Composición de dependencias: arma el servicio de aplicación con adaptadores.
+"""Composición de dependencias: arma los servicios de aplicación con adaptadores.
 
 Si hay DATABASE_URL se usa PostgreSQL; si no, memoria (pruebas y desarrollo
 rápido). El dominio y la aplicación no cambian en ninguno de los dos casos (DIP).
@@ -6,40 +6,90 @@ rápido). El dominio y la aplicación no cambian en ninguno de los dos casos (DI
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
+from datetime import datetime, time, timedelta
 from pathlib import Path
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from src.application.clases import ServicioDeClases
+from src.application.puertos import RepositorioClases, Reloj
 from src.application.servicio import ServicioDeMembresias
+from src.domain.clase import Clase
+from src.domain.specifications import CategoriaClase
 
 from .csv_loader import DATA_DIR, cargar_paquete
 from .db import PlanRow, SocioRow, crear_fabrica_sesiones, crear_motor
 from .memoria import (
     PublicadorEnMemoria,
+    RepositorioClasesMemoria,
+    RepositorioIngresosMemoria,
     RepositorioPlanesMemoria,
     RepositorioSociosMemoria,
     RepositorioSolicitudesMemoria,
 )
+from .reloj import RelojDelSistema
 from .repositorios_sql import (
+    RepositorioClasesSQL,
+    RepositorioIngresosSQL,
     RepositorioPlanesSQL,
     RepositorioSociosSQL,
     RepositorioSolicitudesSQL,
 )
 
 
+@dataclass(frozen=True)
+class Servicios:
+    """Los dos módulos comparten socios, solicitudes y publicador."""
+
+    membresias: ServicioDeMembresias
+    clases: ServicioDeClases
+
+
+def sembrar_clases_si_vacio(repo: RepositorioClases, reloj: Reloj) -> None:
+    """El paquete del PIA no trae clases: estas son datos de demostración para
+    mañana. La capacidad de 2 en Yoga permite ver la lista de espera."""
+    if repo.listar():
+        return
+    manana = reloj.ahora().date() + timedelta(days=1)
+    ejemplos = [
+        ("FIT-K001", "Yoga", CategoriaClase.ESTANDAR, time(7), 2, "Ana Ruiz", "Salón 1"),
+        ("FIT-K002", "Spinning", CategoriaClase.ESTANDAR, time(9), 15, "Luis Vega", "Salón 2"),
+        ("FIT-K003", "HIIT Pro", CategoriaClase.PREMIUM, time(18), 10, "Sara Mena", "Salón 1"),
+    ]
+    for id_, nombre, categoria, hora, capacidad, instructor, salon in ejemplos:
+        repo.guardar(Clase(
+            id_, nombre, categoria, datetime.combine(manana, hora), capacidad,
+            instructor=instructor, salon=salon,
+        ))
+
+
+def crear_servicios_en_memoria(
+    directorio: Path = DATA_DIR, con_solicitudes: bool = True, reloj: Reloj | None = None
+) -> Servicios:
+    """Socios y planes siempre vienen del paquete; las 60 solicitudes de
+    ejemplo y las clases solo si `con_solicitudes` (datos de demostración)."""
+    p = cargar_paquete(directorio)
+    reloj = reloj or RelojDelSistema()
+    socios = RepositorioSociosMemoria(p.socios)
+    solicitudes = RepositorioSolicitudesMemoria(p.solicitudes if con_solicitudes else {})
+    clases = RepositorioClasesMemoria()
+    publicador = PublicadorEnMemoria()
+    if con_solicitudes:
+        sembrar_clases_si_vacio(clases, reloj)
+    return Servicios(
+        ServicioDeMembresias(socios, RepositorioPlanesMemoria(p.planes), solicitudes, publicador),
+        ServicioDeClases(
+            socios, solicitudes, clases, RepositorioIngresosMemoria(), publicador, reloj
+        ),
+    )
+
+
 def crear_servicio_en_memoria(
     directorio: Path = DATA_DIR, con_solicitudes: bool = True
 ) -> ServicioDeMembresias:
-    """Socios y planes siempre vienen del paquete; las 60 solicitudes de
-    ejemplo solo si `con_solicitudes` (datos de demostración)."""
-    p = cargar_paquete(directorio)
-    return ServicioDeMembresias(
-        RepositorioSociosMemoria(p.socios),
-        RepositorioPlanesMemoria(p.planes),
-        RepositorioSolicitudesMemoria(p.solicitudes if con_solicitudes else {}),
-        PublicadorEnMemoria(),
-    )
+    return crear_servicios_en_memoria(directorio, con_solicitudes).membresias
 
 
 def sembrar_si_vacia(
@@ -68,22 +118,40 @@ def sembrar_si_vacia(
             repo.guardar(solicitud)
 
 
-def crear_servicio_sql(
-    url: str, directorio: Path = DATA_DIR, con_solicitudes: bool = True
-) -> ServicioDeMembresias:
+def crear_servicios_sql(
+    url: str, directorio: Path = DATA_DIR, con_solicitudes: bool = True,
+    reloj: Reloj | None = None,
+) -> Servicios:
     sesiones = crear_fabrica_sesiones(crear_motor(url))
     sembrar_si_vacia(sesiones, directorio, con_solicitudes)
-    return ServicioDeMembresias(
-        RepositorioSociosSQL(sesiones),
-        RepositorioPlanesSQL(sesiones),
-        RepositorioSolicitudesSQL(sesiones),
-        PublicadorEnMemoria(),
+    reloj = reloj or RelojDelSistema()
+    socios = RepositorioSociosSQL(sesiones)
+    solicitudes = RepositorioSolicitudesSQL(sesiones)
+    clases = RepositorioClasesSQL(sesiones)
+    publicador = PublicadorEnMemoria()
+    if con_solicitudes:
+        sembrar_clases_si_vacio(clases, reloj)
+    return Servicios(
+        ServicioDeMembresias(socios, RepositorioPlanesSQL(sesiones), solicitudes, publicador),
+        ServicioDeClases(
+            socios, solicitudes, clases, RepositorioIngresosSQL(sesiones), publicador, reloj
+        ),
     )
 
 
-def crear_servicio(con_solicitudes: bool = True) -> ServicioDeMembresias:
+def crear_servicio_sql(
+    url: str, directorio: Path = DATA_DIR, con_solicitudes: bool = True
+) -> ServicioDeMembresias:
+    return crear_servicios_sql(url, directorio, con_solicitudes).membresias
+
+
+def crear_servicios(con_solicitudes: bool = True) -> Servicios:
     """Punto de entrada de la API: PostgreSQL si hay DATABASE_URL, memoria si no."""
     url = os.getenv("DATABASE_URL")
     if url:
-        return crear_servicio_sql(url, con_solicitudes=con_solicitudes)
-    return crear_servicio_en_memoria(con_solicitudes=con_solicitudes)
+        return crear_servicios_sql(url, con_solicitudes=con_solicitudes)
+    return crear_servicios_en_memoria(con_solicitudes=con_solicitudes)
+
+
+def crear_servicio(con_solicitudes: bool = True) -> ServicioDeMembresias:
+    return crear_servicios(con_solicitudes).membresias

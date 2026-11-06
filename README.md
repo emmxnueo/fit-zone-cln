@@ -23,10 +23,14 @@ Materia: Componentes de Lógica de Negocio · Profesor: Miguel Ángel Gómez Mar
 
 ## ¿Qué hace el sistema?
 
-FitZone es un gimnasio que vende membresías mensuales, trimestrales y anuales.
-Este repositorio implementa el módulo de **contratación de membresías**: una
-*solicitud de membresía* nace en `SOLICITADA` y avanza por una máquina de
-estados (RN-41).
+FitZone es un gimnasio que vende membresías y ofrece clases grupales. Este
+repositorio implementa dos módulos:
+
+- **Clases y reservas:** catálogo, reservas, lista de espera FIFO con oferta de
+  15 minutos, tolerancia de retraso, no-shows y sanción automática.
+- **Contratación de membresías:** una *solicitud de membresía* nace en
+  `SOLICITADA` y avanza por una máquina de estados (RN-41). Una membresía
+  `ACTIVA` es lo que permite ingresar y reservar.
 
 ```
 SOLICITADA ──activar──▶ ACTIVA ──congelar──▶ SUSPENDIDA
@@ -42,6 +46,10 @@ RN-08 renovar con pago confirmado, RN-09 congelar con aprobación del
 Administrador, RN-10 baja con aprobación del Administrador, RN-37 solicitud
 procesable, RN-38 total = Σ precio × cantidad con `Decimal`, RN-39 cupo del
 plan, RN-40 beneficio de referencia y RN-41 transiciones válidas.
+
+En reservas: RN-05 ingreso, RN-11 capacidad, RN-13 elegibilidad, RN-14 categorías
+(sin cobro del costo adicional), RN-15 a RN-18 cancelación y no-show, RN-19 a
+RN-24 lista de espera, y RN-25 a RN-28 faltas y sanción.
 
 ## Arquitectura
 
@@ -60,9 +68,10 @@ src/
 - **Specification:** condiciones del negocio combinables con AND / OR / NOT
   (`SocioActivo`, `SolicitudConLineas`, `SolicitudValidada`, `PlanesHabilitados`,
   `CupoDisponible`, `SinMembresiaActiva`, `SolicitudProcesable`,
-  `BeneficioDeReferencia`).
-- **State Machine:** tabla de transiciones en `src/domain/state_machine.py`;
-  cualquier transición fuera de la tabla responde 409.
+  `BeneficioDeReferencia`, `MembresiaVigente`, `PlanIncluyeCategoria`,
+  `SinSancionActiva`, `ElegibleParaReservar`).
+- **State Machine:** tablas de transiciones de la membresía y de la reserva en
+  `src/domain/state_machine.py`; cualquier transición fuera de la tabla responde 409.
 - **Puertos y adaptadores (DIP):** el dominio y la aplicación no conocen la base
   de datos. Con `DATABASE_URL` se usa PostgreSQL; sin ella, memoria.
 
@@ -85,6 +94,14 @@ La documentación de análisis y arquitectura está en `docs/`
 | POST | `/solicitudes/{id}/vencer` | ACTIVA o SUSPENDIDA → VENCIDA |
 | POST | `/solicitudes/{id}/renovar` | VENCIDA → ACTIVA (pago confirmado) |
 | POST | `/solicitudes/{id}/dar-de-baja` | ACTIVA o SUSPENDIDA → CANCELADA (aprobada) |
+| POST | `/clases` | Crear clase (201) |
+| GET | `/clases`, `/clases/{id}` | Catálogo y consulta; con `?socio_id=` agrega la etiqueta (RN-14) |
+| POST | `/clases/{id}/reservas` | Reservar o entrar a la lista de espera (201) |
+| POST | `/clases/{id}/reservas/{reserva_id}/cancelar` | Cancelar; con menos de 1 h cuenta como falta |
+| POST | `/clases/{id}/oferta/confirmar` | Confirmar la oferta de lugar (15 min) |
+| POST | `/clases/procesar-reloj` | Expira ofertas y aplica la tolerancia; acepta `ahora` para la demostración |
+| GET | `/socios/{id}` | Faltas y sanción |
+| POST | `/socios/{id}/ingresos` | Registrar ingreso (RN-05) |
 | GET | `/planes` | Catálogo de planes |
 | GET | `/eventos` | Domain Events publicados |
 | GET | `/health` | Estado del servicio |
@@ -112,7 +129,8 @@ docker compose --profile tests run --rm tests   # pruebas con cobertura
 ```
 
 La primera petición a la API crea las tablas y carga los datos del paquete
-(40 socios, 20 planes y 60 solicitudes). Para empezar de cero:
+(40 socios, 20 planes y 60 solicitudes) y 3 clases de demostración para el día
+siguiente, que no vienen del paquete. Para empezar de cero:
 `docker compose down -v`.
 
 ## Ejecución local (sin Docker)
@@ -161,11 +179,27 @@ a `main` redespliega automáticamente.
    `cantidad: "tres"`, 400 · `socio_id` inexistente, 404.
 7. `GET /eventos`: se ven los Domain Events publicados.
 
+Reservas (después de activar una membresía a cada socio, con los pasos 3 y 5):
+
+8. `POST /clases` con capacidad 1 y un `inicio` futuro, en hora local y sin zona.
+9. `POST /clases/{id}/reservas` con dos socios: el primero queda confirmado y el
+   segundo en la lista de espera.
+10. Cancelar la reserva del primero: `GET /clases/{id}` muestra la entrada `OFERTADA`.
+11. `POST /clases/{id}/oferta/confirmar` con el segundo socio, o
+    `POST /clases/procesar-reloj` con un `ahora` 16 minutos después para expirarla.
+12. Para ver un no-show, llamar `procesar-reloj` con un `ahora` 11 minutos después del
+    inicio; `GET /socios/{id}` muestra la falta y, a la tercera del mes, la sanción.
+
 ## Alcance y relación con el análisis
 
-El BRD completo de FitZone (reservas, lista de espera, no-shows y sanciones,
-BN-01 a BN-08) vive en `docs/BRD.md`. El código de este repositorio implementa
-el módulo de **contratación de membresías** (BN-09 y BN-10, RN-37 a RN-41,
-junto con RN-03, RN-08, RN-09 y RN-10), que es el que usa el paquete de datos
-del PIA. Las diferencias entre el paquete y el BRD están documentadas en el
-Anexo B del reporte.
+El BRD completo de FitZone vive en `docs/BRD.md`. El código implementa la
+**contratación de membresías** (BN-09 y BN-10), que es lo que usa el paquete de
+datos del PIA, y **clases, reservas, lista de espera y sanciones** (BN-01 y
+BN-02). Las diferencias entre el paquete y el BRD están documentadas en el
+Anexo B del reporte, y el estado de cada regla en
+`docs/architecture/trazabilidad.md`.
+
+Quedan solo diseñados los reportes, la cancelación de clases, las excepciones,
+el alta con edad y deslinde, y el cambio de plan. Las notificaciones se publican
+como eventos, sin canal real, y `POST /clases/procesar-reloj` necesita una tarea
+programada externa que lo llame.

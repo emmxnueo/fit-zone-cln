@@ -5,17 +5,18 @@ from fastapi.responses import JSONResponse
 
 from src.domain.errors import ErrorDeDominio
 
-from .routers import catalogo, solicitudes
+from .routers import catalogo, clases, socios, solicitudes
 
 app = FastAPI(
     title="FitZone - Componentes de Lógica de Negocio",
     description=(
-        "API del PIA (Equipo 11, FIME-UANL): contratación de membresías de FitZone.\n\n"
+        "API del PIA (Equipo 11, FIME-UANL): membresías, clases, reservas, lista de "
+        "espera y sanciones de FitZone.\n\n"
         "Códigos HTTP: **201** al crear · **200** lecturas y cambios · **400** formato "
         "inválido · **404** no existe · **409** conflicto de estado, cupo o membresía "
         "activa · **422** regla de negocio violada."
     ),
-    version="0.2.0",
+    version="0.3.0",
 )
 
 
@@ -48,4 +49,6 @@ def health() -> dict:
 
 
 app.include_router(solicitudes.router)
+app.include_router(clases.router)
+app.include_router(socios.router)
 app.include_router(catalogo.router)

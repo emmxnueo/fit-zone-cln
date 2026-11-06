@@ -1,6 +1,6 @@
-"""Máquina de estados de la membresía / solicitud de membresía (RN-41).
+"""Máquinas de estados de la membresía (RN-41) y de la reserva (RN-15 a RN-17).
 
-Cualquier par (estado, acción) que no esté en TRANSICIONES se rechaza (409).
+Cualquier par (estado, acción) que no esté en su tabla se rechaza (409).
 """
 from __future__ import annotations
 
@@ -53,3 +53,32 @@ def siguiente_estado(estado: EstadoMembresia, accion: AccionMembresia) -> Estado
 
 def acciones_permitidas(estado: EstadoMembresia) -> list[AccionMembresia]:
     return [a for (e, a) in TRANSICIONES if e == estado]
+
+
+class EstadoReserva(str, Enum):
+    CONFIRMADA = "CONFIRMADA"
+    CANCELADA = "CANCELADA"  # estados finales: CANCELADA, CANCELADA_TARDE, NO_SHOW
+    CANCELADA_TARDE = "CANCELADA_TARDE"
+    NO_SHOW = "NO_SHOW"
+
+
+class AccionReserva(str, Enum):
+    CANCELAR = "cancelar"
+    CANCELAR_TARDE = "cancelar_tarde"
+    MARCAR_NO_SHOW = "marcar_no_show"
+
+
+TRANSICIONES_RESERVA: dict[tuple[EstadoReserva, AccionReserva], EstadoReserva] = {
+    (EstadoReserva.CONFIRMADA, AccionReserva.CANCELAR): EstadoReserva.CANCELADA,
+    (EstadoReserva.CONFIRMADA, AccionReserva.CANCELAR_TARDE): EstadoReserva.CANCELADA_TARDE,
+    (EstadoReserva.CONFIRMADA, AccionReserva.MARCAR_NO_SHOW): EstadoReserva.NO_SHOW,
+}
+
+
+def siguiente_estado_reserva(estado: EstadoReserva, accion: AccionReserva) -> EstadoReserva:
+    try:
+        return TRANSICIONES_RESERVA[(estado, accion)]
+    except KeyError:
+        raise TransicionInvalida(
+            f"No se puede '{accion.value}' una reserva en {estado.value}", "RN-15"
+        ) from None
