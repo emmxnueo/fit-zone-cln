@@ -1,21 +1,21 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "FitZone - Componentes de Lógica de Negocio",
-    "description": "API del PIA (Equipo 11, FIME-UANL): membresías, clases, reservas, lista de espera, sanciones y reportes de FitZone.\n\nCódigos HTTP: **201** al crear · **200** lecturas y cambios · **400** formato inválido · **404** no existe · **409** conflicto de estado, cupo o membresía activa · **422** regla de negocio violada.",
-    "version": "0.6.0"
+    "title": "FitZone",
+    "description": "\nAPI de FitZone (Equipo 11, FIME-UANL): membresías, clases, reservas, lista de espera,\nsanciones y reportes.\n\n**Cómo probarla**\n\n1. Crea una solicitud en `POST /solicitudes`.\n2. Actívala en `POST /solicitudes/{solicitud_id}/activar`.\n3. Consulta las clases en `GET /clases` y reserva en `POST /clases/{clase_id}/reservas`.\n\n**Qué significa cada respuesta**\n\n| Código | Significado |\n|---|---|\n| 200 | Todo salió bien |\n| 201 | Se creó correctamente |\n| 400 | Faltan datos o tienen un formato incorrecto |\n| 404 | Lo que buscas no existe |\n| 409 | La acción no se puede hacer en este momento |\n| 422 | No se cumple una regla del negocio |\n\nLos errores explican qué pasó e indican la regla del BRD, por ejemplo `RN-13`.\n",
+    "version": "0.7.0"
   },
   "paths": {
     "/health": {
       "get": {
         "tags": [
-          "sistema"
+          "Sistema"
         ],
-        "summary": "Health",
+        "summary": "Comprobar que el sistema está activo",
         "operationId": "health_health_get",
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -32,10 +32,10 @@
     "/solicitudes": {
       "post": {
         "tags": [
-          "Solicitudes de membresía"
+          "Membresías"
         ],
         "summary": "Crear una solicitud de membresía",
-        "description": "Crea la solicitud en estado SOLICITADA. Total = Σ precio × cantidad (RN-38).",
+        "description": "Registra los planes que el socio quiere contratar y calcula el total. La membresía empieza a contar hasta que se activa. Regla: RN-38.",
         "operationId": "crear_solicitud_solicitudes_post",
         "requestBody": {
           "required": true,
@@ -49,7 +49,7 @@
         },
         "responses": {
           "201": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -59,7 +59,7 @@
             }
           },
           "400": {
-            "description": "Formato de la solicitud inválido",
+            "description": "Faltan datos o tienen un formato incorrecto",
             "content": {
               "application/json": {
                 "schema": {
@@ -79,7 +79,7 @@
             }
           },
           "422": {
-            "description": "Regla de negocio violada (RN-xx)",
+            "description": "No se cumple una regla del negocio",
             "content": {
               "application/json": {
                 "schema": {
@@ -92,9 +92,10 @@
       },
       "get": {
         "tags": [
-          "Solicitudes de membresía"
+          "Membresías"
         ],
-        "summary": "Listar solicitudes",
+        "summary": "Ver las solicitudes y membresías",
+        "description": "Puedes filtrar por estado, por ejemplo ACTIVA.",
         "operationId": "listar_solicitudes_solicitudes_get",
         "parameters": [
           {
@@ -110,13 +111,15 @@
                   "type": "null"
                 }
               ],
+              "description": "Opcional. Estado a mostrar.",
               "title": "Estado"
-            }
+            },
+            "description": "Opcional. Estado a mostrar."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -130,21 +133,11 @@
             }
           },
           "400": {
-            "description": "Formato de la solicitud inválido",
+            "description": "Faltan datos o tienen un formato incorrecto",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -155,7 +148,7 @@
     "/solicitudes/{solicitud_id}": {
       "get": {
         "tags": [
-          "Solicitudes de membresía"
+          "Membresías"
         ],
         "summary": "Consultar una solicitud",
         "operationId": "obtener_solicitud_solicitudes__solicitud_id__get",
@@ -166,13 +159,18 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Identificador de la solicitud.",
+              "examples": [
+                "FIT-O001"
+              ],
               "title": "Solicitud Id"
-            }
+            },
+            "description": "Identificador de la solicitud."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -190,16 +188,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
         }
       }
@@ -207,9 +195,10 @@
     "/solicitudes/{solicitud_id}/procesable": {
       "get": {
         "tags": [
-          "Solicitudes de membresía"
+          "Membresías"
         ],
-        "summary": "¿Es procesable? (RN-37)",
+        "summary": "Saber si una solicitud se puede activar",
+        "description": "Revisa que el socio esté activo, que tenga planes y que esté validada, y explica qué falta. Regla: RN-37.",
         "operationId": "es_procesable_solicitudes__solicitud_id__procesable_get",
         "parameters": [
           {
@@ -218,13 +207,18 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Identificador de la solicitud.",
+              "examples": [
+                "FIT-O001"
+              ],
               "title": "Solicitud Id"
-            }
+            },
+            "description": "Identificador de la solicitud."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -239,16 +233,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -259,9 +243,10 @@
     "/solicitudes/{solicitud_id}/beneficio-referencia": {
       "get": {
         "tags": [
-          "Solicitudes de membresía"
+          "Membresías"
         ],
-        "summary": "¿Aplica el beneficio de referencia? (RN-40)",
+        "summary": "Saber si aplica el beneficio de referencia",
+        "description": "Aplica a socios Premium con un total de 1500 MXN o más y sin cortesía activa. Regla: RN-40.",
         "operationId": "beneficio_de_referencia_solicitudes__solicitud_id__beneficio_referencia_get",
         "parameters": [
           {
@@ -270,13 +255,18 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Identificador de la solicitud.",
+              "examples": [
+                "FIT-O001"
+              ],
               "title": "Solicitud Id"
-            }
+            },
+            "description": "Identificador de la solicitud."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -294,16 +284,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
         }
       }
@@ -311,10 +291,10 @@
     "/solicitudes/{solicitud_id}/activar": {
       "post": {
         "tags": [
-          "Solicitudes de membresía"
+          "Membresías"
         ],
-        "summary": "Activar (SOLICITADA → ACTIVA)",
-        "description": "Exige RN-03 (una sola membresía activa), RN-37 (procesable), RN-38 (plan habilitado) y RN-39 (cupo).",
+        "summary": "Activar una membresía",
+        "description": "El socio no debe tener otra membresía activa, la solicitud debe estar completa y el plan debe tener cupo. Reglas: RN-03, RN-37, RN-38, RN-39, RN-41.",
         "operationId": "activar_solicitudes__solicitud_id__activar_post",
         "parameters": [
           {
@@ -323,13 +303,18 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Identificador de la solicitud.",
+              "examples": [
+                "FIT-O001"
+              ],
               "title": "Solicitud Id"
-            }
+            },
+            "description": "Identificador de la solicitud."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -349,7 +334,7 @@
             }
           },
           "409": {
-            "description": "Conflicto de estado, cupo o membresía activa",
+            "description": "La acción no se puede hacer en el estado actual",
             "content": {
               "application/json": {
                 "schema": {
@@ -359,7 +344,7 @@
             }
           },
           "422": {
-            "description": "Regla de negocio violada (RN-xx)",
+            "description": "No se cumple una regla del negocio",
             "content": {
               "application/json": {
                 "schema": {
@@ -374,9 +359,10 @@
     "/solicitudes/{solicitud_id}/cancelar": {
       "post": {
         "tags": [
-          "Solicitudes de membresía"
+          "Membresías"
         ],
-        "summary": "Cancelar (SOLICITADA → CANCELADA)",
+        "summary": "Cancelar una solicitud",
+        "description": "Solo mientras no se haya activado. Regla: RN-41.",
         "operationId": "cancelar_solicitudes__solicitud_id__cancelar_post",
         "parameters": [
           {
@@ -385,13 +371,18 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Identificador de la solicitud.",
+              "examples": [
+                "FIT-O001"
+              ],
               "title": "Solicitud Id"
-            }
+            },
+            "description": "Identificador de la solicitud."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -411,21 +402,11 @@
             }
           },
           "409": {
-            "description": "Conflicto de estado, cupo o membresía activa",
+            "description": "La acción no se puede hacer en el estado actual",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -436,10 +417,10 @@
     "/solicitudes/{solicitud_id}/congelar": {
       "post": {
         "tags": [
-          "Solicitudes de membresía"
+          "Membresías"
         ],
-        "summary": "Congelar (ACTIVA → SUSPENDIDA)",
-        "description": "Solo con solicitud aprobada por el Administrador (RN-09).",
+        "summary": "Congelar una membresía",
+        "description": "Pausa una membresía activa. Necesita la aprobación del Administrador. Regla: RN-09.",
         "operationId": "congelar_solicitudes__solicitud_id__congelar_post",
         "parameters": [
           {
@@ -448,8 +429,13 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Identificador de la solicitud.",
+              "examples": [
+                "FIT-O001"
+              ],
               "title": "Solicitud Id"
-            }
+            },
+            "description": "Identificador de la solicitud."
           }
         ],
         "requestBody": {
@@ -464,7 +450,7 @@
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -474,7 +460,7 @@
             }
           },
           "400": {
-            "description": "Formato de la solicitud inválido",
+            "description": "Faltan datos o tienen un formato incorrecto",
             "content": {
               "application/json": {
                 "schema": {
@@ -494,7 +480,7 @@
             }
           },
           "409": {
-            "description": "Conflicto de estado, cupo o membresía activa",
+            "description": "La acción no se puede hacer en el estado actual",
             "content": {
               "application/json": {
                 "schema": {
@@ -504,7 +490,7 @@
             }
           },
           "422": {
-            "description": "Regla de negocio violada (RN-xx)",
+            "description": "No se cumple una regla del negocio",
             "content": {
               "application/json": {
                 "schema": {
@@ -519,9 +505,10 @@
     "/solicitudes/{solicitud_id}/descongelar": {
       "post": {
         "tags": [
-          "Solicitudes de membresía"
+          "Membresías"
         ],
-        "summary": "Descongelar (SUSPENDIDA → ACTIVA)",
+        "summary": "Descongelar una membresía",
+        "description": "La membresía vuelve a estar activa. Regla: RN-41.",
         "operationId": "descongelar_solicitudes__solicitud_id__descongelar_post",
         "parameters": [
           {
@@ -530,13 +517,18 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Identificador de la solicitud.",
+              "examples": [
+                "FIT-O001"
+              ],
               "title": "Solicitud Id"
-            }
+            },
+            "description": "Identificador de la solicitud."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -556,21 +548,11 @@
             }
           },
           "409": {
-            "description": "Conflicto de estado, cupo o membresía activa",
+            "description": "La acción no se puede hacer en el estado actual",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -581,10 +563,10 @@
     "/solicitudes/{solicitud_id}/vencer": {
       "post": {
         "tags": [
-          "Solicitudes de membresía"
+          "Membresías"
         ],
-        "summary": "Vencer (ACTIVA o SUSPENDIDA → VENCIDA)",
-        "description": "Lo dispara el reloj del sistema al llegar la fecha de vencimiento (RN-04).",
+        "summary": "Marcar una membresía como vencida",
+        "description": "Se usa al llegar la fecha de vencimiento. Regla: RN-04.",
         "operationId": "vencer_solicitudes__solicitud_id__vencer_post",
         "parameters": [
           {
@@ -593,13 +575,18 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Identificador de la solicitud.",
+              "examples": [
+                "FIT-O001"
+              ],
               "title": "Solicitud Id"
-            }
+            },
+            "description": "Identificador de la solicitud."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -619,21 +606,11 @@
             }
           },
           "409": {
-            "description": "Conflicto de estado, cupo o membresía activa",
+            "description": "La acción no se puede hacer en el estado actual",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -644,10 +621,10 @@
     "/solicitudes/{solicitud_id}/renovar": {
       "post": {
         "tags": [
-          "Solicitudes de membresía"
+          "Membresías"
         ],
-        "summary": "Renovar (VENCIDA → ACTIVA)",
-        "description": "Exige el pago confirmado (RN-08).",
+        "summary": "Renovar una membresía vencida",
+        "description": "Necesita el pago confirmado. Regla: RN-08.",
         "operationId": "renovar_solicitudes__solicitud_id__renovar_post",
         "parameters": [
           {
@@ -656,8 +633,13 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Identificador de la solicitud.",
+              "examples": [
+                "FIT-O001"
+              ],
               "title": "Solicitud Id"
-            }
+            },
+            "description": "Identificador de la solicitud."
           }
         ],
         "requestBody": {
@@ -672,7 +654,7 @@
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -682,7 +664,7 @@
             }
           },
           "400": {
-            "description": "Formato de la solicitud inválido",
+            "description": "Faltan datos o tienen un formato incorrecto",
             "content": {
               "application/json": {
                 "schema": {
@@ -702,7 +684,7 @@
             }
           },
           "409": {
-            "description": "Conflicto de estado, cupo o membresía activa",
+            "description": "La acción no se puede hacer en el estado actual",
             "content": {
               "application/json": {
                 "schema": {
@@ -712,7 +694,7 @@
             }
           },
           "422": {
-            "description": "Regla de negocio violada (RN-xx)",
+            "description": "No se cumple una regla del negocio",
             "content": {
               "application/json": {
                 "schema": {
@@ -727,10 +709,10 @@
     "/solicitudes/{solicitud_id}/dar-de-baja": {
       "post": {
         "tags": [
-          "Solicitudes de membresía"
+          "Membresías"
         ],
-        "summary": "Dar de baja (ACTIVA o SUSPENDIDA → CANCELADA)",
-        "description": "Solo con solicitud aprobada por el Administrador (RN-10).",
+        "summary": "Dar de baja una membresía",
+        "description": "Es definitivo y necesita la aprobación del Administrador. Regla: RN-10.",
         "operationId": "dar_de_baja_solicitudes__solicitud_id__dar_de_baja_post",
         "parameters": [
           {
@@ -739,8 +721,13 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Identificador de la solicitud.",
+              "examples": [
+                "FIT-O001"
+              ],
               "title": "Solicitud Id"
-            }
+            },
+            "description": "Identificador de la solicitud."
           }
         ],
         "requestBody": {
@@ -755,7 +742,7 @@
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -765,7 +752,7 @@
             }
           },
           "400": {
-            "description": "Formato de la solicitud inválido",
+            "description": "Faltan datos o tienen un formato incorrecto",
             "content": {
               "application/json": {
                 "schema": {
@@ -785,7 +772,7 @@
             }
           },
           "409": {
-            "description": "Conflicto de estado, cupo o membresía activa",
+            "description": "La acción no se puede hacer en el estado actual",
             "content": {
               "application/json": {
                 "schema": {
@@ -795,7 +782,7 @@
             }
           },
           "422": {
-            "description": "Regla de negocio violada (RN-xx)",
+            "description": "No se cumple una regla del negocio",
             "content": {
               "application/json": {
                 "schema": {
@@ -813,6 +800,7 @@
           "Clases y reservas"
         ],
         "summary": "Crear una clase",
+        "description": "La capacidad debe ser de al menos 1 lugar. Regla: RN-11.",
         "operationId": "crear_clase_clases_post",
         "requestBody": {
           "required": true,
@@ -826,7 +814,7 @@
         },
         "responses": {
           "201": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -836,7 +824,7 @@
             }
           },
           "400": {
-            "description": "Formato de la solicitud inválido",
+            "description": "Faltan datos o tienen un formato incorrecto",
             "content": {
               "application/json": {
                 "schema": {
@@ -846,7 +834,7 @@
             }
           },
           "422": {
-            "description": "Regla de negocio violada (RN-xx)",
+            "description": "No se cumple una regla del negocio",
             "content": {
               "application/json": {
                 "schema": {
@@ -861,8 +849,8 @@
         "tags": [
           "Clases y reservas"
         ],
-        "summary": "Catálogo de clases",
-        "description": "Con `socio_id` agrega la etiqueta de cada clase para ese socio (RN-14).",
+        "summary": "Ver el catálogo de clases",
+        "description": "Con un socio, indica si cada clase va incluida en su plan. Regla: RN-14.",
         "operationId": "listar_clases_clases_get",
         "parameters": [
           {
@@ -878,13 +866,15 @@
                   "type": "null"
                 }
               ],
+              "description": "Opcional. Muestra si cada clase está incluida en el plan de este socio.",
               "title": "Socio Id"
-            }
+            },
+            "description": "Opcional. Muestra si cada clase está incluida en el plan de este socio."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -906,16 +896,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
         }
       }
@@ -925,8 +905,8 @@
         "tags": [
           "Clases y reservas"
         ],
-        "summary": "Ejecutar el reloj del sistema",
-        "description": "Expira ofertas (RN-20) y aplica la tolerancia de retraso (RN-17, RN-21). Lo dispara una tarea programada; no hay un proceso interno que lo llame.",
+        "summary": "Revisar ofertas vencidas y retrasos",
+        "description": "Vence las ofertas sin confirmar y marca como no-show a quien lleva más de 10 minutos de retraso. Puedes indicar una fecha y hora para simularlo. Reglas: RN-17, RN-20, RN-21.",
         "operationId": "procesar_reloj_clases_procesar_reloj_post",
         "requestBody": {
           "content": {
@@ -947,7 +927,7 @@
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -957,21 +937,11 @@
             }
           },
           "400": {
-            "description": "Formato de la solicitud inválido",
+            "description": "Faltan datos o tienen un formato incorrecto",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -993,8 +963,13 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Identificador de la clase.",
+              "examples": [
+                "FIT-K001"
+              ],
               "title": "Clase Id"
-            }
+            },
+            "description": "Identificador de la clase."
           },
           {
             "name": "socio_id",
@@ -1009,13 +984,15 @@
                   "type": "null"
                 }
               ],
+              "description": "Opcional. Muestra si cada clase está incluida en el plan de este socio.",
               "title": "Socio Id"
-            }
+            },
+            "description": "Opcional. Muestra si cada clase está incluida en el plan de este socio."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -1033,16 +1010,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
         }
       }
@@ -1052,8 +1019,8 @@
         "tags": [
           "Clases y reservas"
         ],
-        "summary": "Solicitar la cancelación (PROGRAMADA → CANCELACION_SOLICITADA)",
-        "description": "Solo el instructor asignado y con 2 h o más de aviso (RN-29).",
+        "summary": "Pedir que se cancele una clase (Instructor)",
+        "description": "Solo el instructor asignado y con 2 horas o más de aviso. Regla: RN-29.",
         "operationId": "solicitar_cancelacion_clases__clase_id__cancelacion_post",
         "parameters": [
           {
@@ -1062,8 +1029,13 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Identificador de la clase.",
+              "examples": [
+                "FIT-K001"
+              ],
               "title": "Clase Id"
-            }
+            },
+            "description": "Identificador de la clase."
           }
         ],
         "requestBody": {
@@ -1078,7 +1050,7 @@
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -1088,7 +1060,7 @@
             }
           },
           "400": {
-            "description": "Formato de la solicitud inválido",
+            "description": "Faltan datos o tienen un formato incorrecto",
             "content": {
               "application/json": {
                 "schema": {
@@ -1108,7 +1080,7 @@
             }
           },
           "409": {
-            "description": "Clase iniciada, reserva repetida u oferta inválida",
+            "description": "La acción no se puede hacer en este momento",
             "content": {
               "application/json": {
                 "schema": {
@@ -1118,7 +1090,7 @@
             }
           },
           "422": {
-            "description": "Regla de negocio violada (RN-xx)",
+            "description": "No se cumple una regla del negocio",
             "content": {
               "application/json": {
                 "schema": {
@@ -1135,8 +1107,8 @@
         "tags": [
           "Clases y reservas"
         ],
-        "summary": "Resolver la cancelación (Administrador)",
-        "description": "Al aprobarse se cancelan las reservas sin falta y se descarta la lista de espera; al rechazarse, la clase sigue PROGRAMADA (RN-30).",
+        "summary": "Aprobar o rechazar la cancelación (Administrador)",
+        "description": "Si se aprueba, las reservas se cancelan sin falta y se borra la lista de espera. Si se rechaza, la clase sigue igual. Reglas: RN-30, RN-31.",
         "operationId": "resolver_cancelacion_clases__clase_id__cancelacion_resolver_post",
         "parameters": [
           {
@@ -1145,8 +1117,13 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Identificador de la clase.",
+              "examples": [
+                "FIT-K001"
+              ],
               "title": "Clase Id"
-            }
+            },
+            "description": "Identificador de la clase."
           }
         ],
         "requestBody": {
@@ -1161,7 +1138,7 @@
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -1171,7 +1148,7 @@
             }
           },
           "400": {
-            "description": "Formato de la solicitud inválido",
+            "description": "Faltan datos o tienen un formato incorrecto",
             "content": {
               "application/json": {
                 "schema": {
@@ -1191,21 +1168,11 @@
             }
           },
           "409": {
-            "description": "Clase iniciada, reserva repetida u oferta inválida",
+            "description": "La acción no se puede hacer en este momento",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1219,7 +1186,7 @@
           "Clases y reservas"
         ],
         "summary": "Reservar un lugar",
-        "description": "Exige RN-13. Si no hay lugar, el socio entra a la lista de espera.",
+        "description": "El socio necesita membresía activa, un plan que incluya la clase y no tener sanción. Si no hay lugar, entra a la lista de espera. Reglas: RN-11, RN-13, RN-19, RN-24, RN-26.",
         "operationId": "reservar_clases__clase_id__reservas_post",
         "parameters": [
           {
@@ -1228,8 +1195,13 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Identificador de la clase.",
+              "examples": [
+                "FIT-K001"
+              ],
               "title": "Clase Id"
-            }
+            },
+            "description": "Identificador de la clase."
           }
         ],
         "requestBody": {
@@ -1244,7 +1216,7 @@
         },
         "responses": {
           "201": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -1254,7 +1226,7 @@
             }
           },
           "400": {
-            "description": "Formato de la solicitud inválido",
+            "description": "Faltan datos o tienen un formato incorrecto",
             "content": {
               "application/json": {
                 "schema": {
@@ -1274,7 +1246,7 @@
             }
           },
           "409": {
-            "description": "Clase iniciada, reserva repetida u oferta inválida",
+            "description": "La acción no se puede hacer en este momento",
             "content": {
               "application/json": {
                 "schema": {
@@ -1284,7 +1256,7 @@
             }
           },
           "422": {
-            "description": "Regla de negocio violada (RN-xx)",
+            "description": "No se cumple una regla del negocio",
             "content": {
               "application/json": {
                 "schema": {
@@ -1302,7 +1274,7 @@
           "Clases y reservas"
         ],
         "summary": "Cancelar una reserva",
-        "description": "Con menos de 1 h cuenta como falta (RN-15, RN-16).",
+        "description": "Con menos de 1 hora de anticipación cuenta como falta. Reglas: RN-15, RN-16.",
         "operationId": "cancelar_reserva_clases__clase_id__reservas__reserva_id__cancelar_post",
         "parameters": [
           {
@@ -1311,8 +1283,13 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Identificador de la clase.",
+              "examples": [
+                "FIT-K001"
+              ],
               "title": "Clase Id"
-            }
+            },
+            "description": "Identificador de la clase."
           },
           {
             "name": "reserva_id",
@@ -1320,13 +1297,18 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Identificador de la reserva.",
+              "examples": [
+                "RES-1A2B3C4D"
+              ],
               "title": "Reserva Id"
-            }
+            },
+            "description": "Identificador de la reserva."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -1346,21 +1328,11 @@
             }
           },
           "409": {
-            "description": "Clase iniciada, reserva repetida u oferta inválida",
+            "description": "La acción no se puede hacer en este momento",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1373,8 +1345,8 @@
         "tags": [
           "Clases y reservas"
         ],
-        "summary": "Confirmar la oferta de lugar",
-        "description": "Se acepta hasta los 15 minutos exactos (RN-20).",
+        "summary": "Confirmar un lugar ofrecido",
+        "description": "Quien recibe la oferta tiene 15 minutos para confirmar. Regla: RN-20.",
         "operationId": "confirmar_oferta_clases__clase_id__oferta_confirmar_post",
         "parameters": [
           {
@@ -1383,8 +1355,13 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Identificador de la clase.",
+              "examples": [
+                "FIT-K001"
+              ],
               "title": "Clase Id"
-            }
+            },
+            "description": "Identificador de la clase."
           }
         ],
         "requestBody": {
@@ -1399,7 +1376,7 @@
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -1409,7 +1386,7 @@
             }
           },
           "400": {
-            "description": "Formato de la solicitud inválido",
+            "description": "Faltan datos o tienen un formato incorrecto",
             "content": {
               "application/json": {
                 "schema": {
@@ -1429,7 +1406,7 @@
             }
           },
           "409": {
-            "description": "Clase iniciada, reserva repetida u oferta inválida",
+            "description": "La acción no se puede hacer en este momento",
             "content": {
               "application/json": {
                 "schema": {
@@ -1439,7 +1416,7 @@
             }
           },
           "422": {
-            "description": "Regla de negocio violada (RN-xx)",
+            "description": "No se cumple una regla del negocio",
             "content": {
               "application/json": {
                 "schema": {
@@ -1456,11 +1433,11 @@
         "tags": [
           "Socios"
         ],
-        "summary": "Listar socios",
+        "summary": "Ver los socios",
         "operationId": "listar_socios_socios_get",
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -1481,7 +1458,8 @@
         "tags": [
           "Socios"
         ],
-        "summary": "Consultar faltas y sanción",
+        "summary": "Consultar las faltas y la sanción de un socio",
+        "description": "Con 3 faltas en el mes, el socio no puede reservar por 7 días. Reglas: RN-25 a RN-28.",
         "operationId": "obtener_socio_socios__socio_id__get",
         "parameters": [
           {
@@ -1490,13 +1468,18 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Número de socio.",
+              "examples": [
+                "FIT-C005"
+              ],
               "title": "Socio Id"
-            }
+            },
+            "description": "Número de socio."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -1514,16 +1497,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
         }
       }
@@ -1533,8 +1506,8 @@
         "tags": [
           "Socios"
         ],
-        "summary": "Registrar un ingreso",
-        "description": "Solo con membresía vigente (RN-05). Cuenta como presente (RN-18).",
+        "summary": "Registrar la entrada al gimnasio",
+        "description": "Solo con membresía activa. Ese día el socio cuenta como presente. Reglas: RN-05, RN-18.",
         "operationId": "registrar_ingreso_socios__socio_id__ingresos_post",
         "parameters": [
           {
@@ -1543,13 +1516,18 @@
             "required": true,
             "schema": {
               "type": "string",
+              "description": "Número de socio.",
+              "examples": [
+                "FIT-C005"
+              ],
               "title": "Socio Id"
-            }
+            },
+            "description": "Número de socio."
           }
         ],
         "responses": {
           "201": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -1569,7 +1547,7 @@
             }
           },
           "422": {
-            "description": "Regla de negocio violada (RN-xx)",
+            "description": "No se cumple una regla del negocio",
             "content": {
               "application/json": {
                 "schema": {
@@ -1586,8 +1564,8 @@
         "tags": [
           "Reportes"
         ],
-        "summary": "Afluencia por hora y día",
-        "description": "Total de ingresos entre `desde` y `hasta`, ambos inclusive (RN-35).",
+        "summary": "Ver cuánta gente entra por hora y por día",
+        "description": "Cuenta las entradas al gimnasio en un rango de fechas. Regla: RN-35.",
         "operationId": "afluencia_reportes_afluencia_get",
         "parameters": [
           {
@@ -1597,8 +1575,13 @@
             "schema": {
               "type": "string",
               "format": "date",
+              "description": "Primer día del reporte.",
+              "examples": [
+                "2026-11-01"
+              ],
               "title": "Desde"
-            }
+            },
+            "description": "Primer día del reporte."
           },
           {
             "name": "hasta",
@@ -1607,13 +1590,18 @@
             "schema": {
               "type": "string",
               "format": "date",
+              "description": "Último día del reporte, incluido.",
+              "examples": [
+                "2026-11-30"
+              ],
               "title": "Hasta"
-            }
+            },
+            "description": "Último día del reporte, incluido."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -1623,7 +1611,7 @@
             }
           },
           "400": {
-            "description": "Formato de la solicitud inválido",
+            "description": "Faltan datos o tienen un formato incorrecto",
             "content": {
               "application/json": {
                 "schema": {
@@ -1633,7 +1621,7 @@
             }
           },
           "422": {
-            "description": "Fecha final anterior a la inicial (RN-35)",
+            "description": "La fecha final es anterior a la inicial",
             "content": {
               "application/json": {
                 "schema": {
@@ -1650,12 +1638,12 @@
         "tags": [
           "Reportes"
         ],
-        "summary": "Demanda por clase",
-        "description": "Ocupación y lista de espera de cada clase, de mayor a menor (RN-36).",
+        "summary": "Ver la demanda de cada clase",
+        "description": "Muestra la ocupación y la lista de espera, de mayor a menor. Regla: RN-36.",
         "operationId": "demanda_reportes_demanda_get",
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -1674,13 +1662,13 @@
     "/planes": {
       "get": {
         "tags": [
-          "Catálogo y eventos"
+          "Planes y eventos"
         ],
-        "summary": "Listar planes",
+        "summary": "Ver los planes de membresía",
         "operationId": "listar_planes_planes_get",
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -1699,13 +1687,14 @@
     "/eventos": {
       "get": {
         "tags": [
-          "Catálogo y eventos"
+          "Planes y eventos"
         ],
-        "summary": "Domain Events publicados (para la demostración)",
+        "summary": "Ver lo que ha pasado en el sistema",
+        "description": "Lista los eventos de dominio desde el último reinicio.",
         "operationId": "listar_eventos_eventos_get",
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Operación correcta",
             "content": {
               "application/json": {
                 "schema": {
@@ -1771,6 +1760,7 @@
             "type": "string",
             "minLength": 1,
             "title": "Instructor",
+            "description": "Nombre del instructor de la clase.",
             "examples": [
               "Ana Ruiz"
             ]
@@ -1796,18 +1786,23 @@
             "type": "string",
             "minLength": 1,
             "title": "Nombre",
+            "description": "Nombre de la clase.",
             "examples": [
               "Yoga"
             ]
           },
           "categoria": {
-            "$ref": "#/components/schemas/CategoriaClase"
+            "$ref": "#/components/schemas/CategoriaClase",
+            "description": "ESTANDAR va en todos los planes; PREMIUM solo en Premium.",
+            "examples": [
+              "ESTANDAR"
+            ]
           },
           "inicio": {
             "type": "string",
             "format": "date-time",
             "title": "Inicio",
-            "description": "Hora local de Monterrey, sin zona.",
+            "description": "Fecha y hora de Monterrey.",
             "examples": [
               "2026-12-01T18:00:00"
             ]
@@ -1815,7 +1810,7 @@
           "capacidad": {
             "type": "integer",
             "title": "Capacidad",
-            "description": "Entero >= 1 (RN-11).",
+            "description": "Lugares disponibles. Mínimo 1.",
             "examples": [
               20
             ]
@@ -1823,12 +1818,20 @@
           "instructor": {
             "type": "string",
             "title": "Instructor",
-            "default": ""
+            "description": "Quien imparte la clase.",
+            "default": "",
+            "examples": [
+              "Ana Ruiz"
+            ]
           },
           "salon": {
             "type": "string",
             "title": "Salon",
-            "default": ""
+            "description": "Dónde se imparte.",
+            "default": "",
+            "examples": [
+              "Salón 1"
+            ]
           }
         },
         "type": "object",
@@ -1927,7 +1930,10 @@
           "aprobada": {
             "type": "boolean",
             "title": "Aprobada",
-            "description": "Resolución del Administrador (RN-09, RN-10, RN-30)."
+            "description": "true si el Administrador aprueba; false si rechaza.",
+            "examples": [
+              true
+            ]
           }
         },
         "type": "object",
@@ -2032,7 +2038,8 @@
         "properties": {
           "detail": {
             "type": "string",
-            "title": "Detail"
+            "title": "Detail",
+            "description": "Qué pasó, en lenguaje claro."
           },
           "regla": {
             "anyOf": [
@@ -2043,18 +2050,8 @@
                 "type": "null"
               }
             ],
-            "title": "Regla"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
+            "title": "Regla",
+            "description": "Regla del BRD relacionada."
           }
         },
         "type": "object",
@@ -2166,19 +2163,6 @@
         ],
         "title": "FaltaOut"
       },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "type": "array",
-            "title": "Detail"
-          }
-        },
-        "type": "object",
-        "title": "HTTPValidationError"
-      },
       "IngresoOut": {
         "properties": {
           "socio_id": {
@@ -2240,6 +2224,7 @@
             "type": "string",
             "minLength": 1,
             "title": "Plan Id",
+            "description": "Plan a contratar.",
             "examples": [
               "FIT-P001"
             ]
@@ -2247,7 +2232,7 @@
           "cantidad": {
             "type": "integer",
             "title": "Cantidad",
-            "description": "Periodos contratados. Entero >= 1 (RN-38).",
+            "description": "Cuántos periodos se contratan. Debe ser 1 o más.",
             "examples": [
               3
             ]
@@ -2293,7 +2278,10 @@
           "pago_confirmado": {
             "type": "boolean",
             "title": "Pago Confirmado",
-            "description": "Pago confirmado (RN-08)."
+            "description": "true si el pago ya se recibió.",
+            "examples": [
+              true
+            ]
           }
         },
         "type": "object",
@@ -2353,7 +2341,10 @@
               }
             ],
             "title": "Ahora",
-            "description": "Momento a evaluar. Si se omite, se usa el reloj del sistema; sirve para demostrar la tolerancia y la expiración sin esperar."
+            "description": "Opcional. Fecha y hora a simular; sin ella se usa la hora real.",
+            "examples": [
+              "2026-12-01T18:11:00"
+            ]
           }
         },
         "type": "object",
@@ -2445,8 +2436,9 @@
             "type": "string",
             "minLength": 1,
             "title": "Socio Id",
+            "description": "Número de socio.",
             "examples": [
-              "FIT-C001"
+              "FIT-C005"
             ]
           }
         },
@@ -2511,8 +2503,9 @@
             "type": "string",
             "minLength": 1,
             "title": "Socio Id",
+            "description": "Número de socio.",
             "examples": [
-              "FIT-C001"
+              "FIT-C005"
             ]
           },
           "lineas": {
@@ -2520,24 +2513,35 @@
               "$ref": "#/components/schemas/LineaIn"
             },
             "type": "array",
-            "title": "Lineas"
+            "title": "Lineas",
+            "description": "Planes que se contratan."
           },
           "validada": {
             "type": "boolean",
             "title": "Validada",
-            "description": "Validación registrada por Recepción o Administrador.",
-            "default": false
+            "description": "Recepción ya revisó la solicitud.",
+            "default": false,
+            "examples": [
+              true
+            ]
           },
           "cortesia_activa": {
             "type": "boolean",
             "title": "Cortesia Activa",
-            "description": "Cortesía vigente autorizada por el Administrador.",
-            "default": false
+            "description": "El socio tiene una cortesía autorizada.",
+            "default": false,
+            "examples": [
+              false
+            ]
           },
           "referencia": {
             "type": "string",
             "title": "Referencia",
-            "default": ""
+            "description": "Nota opcional.",
+            "default": "",
+            "examples": [
+              "Mostrador"
+            ]
           }
         },
         "type": "object",
@@ -2610,47 +2614,33 @@
           "acciones_permitidas"
         ],
         "title": "SolicitudOut"
-      },
-      "ValidationError": {
-        "properties": {
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Location"
-          },
-          "msg": {
-            "type": "string",
-            "title": "Message"
-          },
-          "type": {
-            "type": "string",
-            "title": "Error Type"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "ctx": {
-            "type": "object",
-            "title": "Context"
-          }
-        },
-        "type": "object",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError"
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "Membresías",
+      "description": "Solicitudes y ciclo de vida de la membresía."
+    },
+    {
+      "name": "Clases y reservas",
+      "description": "Catálogo, reservas y lista de espera."
+    },
+    {
+      "name": "Socios",
+      "description": "Faltas, sanciones y entradas al gimnasio."
+    },
+    {
+      "name": "Reportes",
+      "description": "Afluencia y demanda de clases."
+    },
+    {
+      "name": "Planes y eventos",
+      "description": "Planes disponibles y eventos del sistema."
+    },
+    {
+      "name": "Sistema",
+      "description": "Estado del servicio."
+    }
+  ]
 }

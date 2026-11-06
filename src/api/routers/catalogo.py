@@ -6,12 +6,12 @@ from src.api.dependencias import get_servicio
 from src.api.schemas import EventoOut, PlanOut
 from src.application.servicio import ServicioDeMembresias
 
-router = APIRouter(tags=["Catálogo y eventos"])
+router = APIRouter(tags=["Planes y eventos"])
 
 Servicio = Annotated[ServicioDeMembresias, Depends(get_servicio)]
 
 
-@router.get("/planes", response_model=list[PlanOut], summary="Listar planes")
+@router.get("/planes", response_model=list[PlanOut], summary="Ver los planes de membresía")
 def listar_planes(svc: Servicio):
     return [
         PlanOut(
@@ -23,7 +23,8 @@ def listar_planes(svc: Servicio):
 
 
 @router.get("/eventos", response_model=list[EventoOut],
-            summary="Domain Events publicados (para la demostración)")
+            summary="Ver lo que ha pasado en el sistema",
+            description="Lista los eventos de dominio desde el último reinicio.")
 def listar_eventos(svc: Servicio):
     return [
         EventoOut(evento=e.nombre, solicitud_id=e.solicitud_id, clase_id=e.clase_id,

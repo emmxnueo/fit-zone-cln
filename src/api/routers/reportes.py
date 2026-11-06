@@ -1,9 +1,9 @@
-from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
 from src.api.dependencias import get_servicio_reportes
+from src.api.parametros import Desde, Hasta
 from src.api.schemas import (
     AfluenciaOut,
     DemandaOut,
@@ -17,14 +17,14 @@ router = APIRouter(prefix="/reportes", tags=["Reportes"])
 
 Servicio = Annotated[ServicioDeReportes, Depends(get_servicio_reportes)]
 
-_400 = {400: {"model": ErrorOut, "description": "Formato de la solicitud inválido"}}
-_422 = {422: {"model": ErrorOut, "description": "Fecha final anterior a la inicial (RN-35)"}}
+_400 = {400: {"model": ErrorOut, "description": "Faltan datos o tienen un formato incorrecto"}}
+_422 = {422: {"model": ErrorOut, "description": "La fecha final es anterior a la inicial"}}
 
 
-@router.get("/afluencia", response_model=AfluenciaOut, summary="Afluencia por hora y día",
-            description="Total de ingresos entre `desde` y `hasta`, ambos inclusive (RN-35).",
+@router.get("/afluencia", response_model=AfluenciaOut, summary="Ver cuánta gente entra por hora y por día",
+            description="Cuenta las entradas al gimnasio en un rango de fechas. Regla: RN-35.",
             responses={**_400, **_422})
-def afluencia(desde: date, hasta: date, svc: Servicio):
+def afluencia(desde: Desde, hasta: Hasta, svc: Servicio):
     r = svc.afluencia(desde, hasta)
     return AfluenciaOut(
         desde=r.desde,
@@ -35,8 +35,8 @@ def afluencia(desde: date, hasta: date, svc: Servicio):
     )
 
 
-@router.get("/demanda", response_model=list[DemandaOut], summary="Demanda por clase",
-            description="Ocupación y lista de espera de cada clase, de mayor a menor (RN-36).")
+@router.get("/demanda", response_model=list[DemandaOut], summary="Ver la demanda de cada clase",
+            description="Muestra la ocupación y la lista de espera, de mayor a menor. Regla: RN-36.")
 def demanda(svc: Servicio):
     return [
         DemandaOut(

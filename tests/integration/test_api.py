@@ -94,7 +94,9 @@ def test_procesable_explica_los_motivos(api):
     assert api.get(f"/solicitudes/{ok}/procesable").json() == {"cumple": True, "motivos": []}
     mal = crear(api, socio=INACTIVO, validada=False).json()["id"]
     r = api.get(f"/solicitudes/{mal}/procesable").json()
-    assert r["cumple"] is False and r["motivos"] == ["socio_inactivo", "sin_validacion"]
+    assert r["cumple"] is False and r["motivos"] == [
+        "El socio no está activo", "Falta la validación de Recepción",
+    ]
     assert api.get("/solicitudes/NOPE/procesable").status_code == 404
 
 
@@ -105,7 +107,7 @@ def test_beneficio_de_referencia(api):
     cort = crear(api, socio=PREMIUM, cortesia_activa=True,
                  lineas=[{"plan_id": PLAN.id, "cantidad": 4}]).json()["id"]
     r = api.get(f"/solicitudes/{cort}/beneficio-referencia").json()
-    assert r == {"cumple": False, "motivos": ["cortesia_activa"]}
+    assert r == {"cumple": False, "motivos": ["Tiene una cortesía activa"]}
 
 
 # --- ciclo de vida y reglas (200 / 409 / 422) -----------------------------
@@ -184,3 +186,52 @@ def test_baja_requiere_administrador_rn10(api):
     assert sin.status_code == 422 and sin.json()["regla"] == "RN-10"
     con = api.post(f"/solicitudes/{sid}/dar-de-baja", json={"aprobada": True})
     assert con.json()["estado"] == "CANCELADA" and con.json()["acciones_permitidas"] == []
+
+
+# --- mensajes claros en Swagger ---------------------------------------------
+def test_los_errores_de_formato_se_explican_en_lenguaje_claro(api):
+    r = api.post("/solicitudes", json={"lineas": [{"plan_id": PLAN.id, "cantidad": "tres"}]})
+    assert r.status_code == 400
+    assert r.json() == {
+        "detail": "Falta el campo socio. El campo cantidad debe ser un número entero",
+        "regla": None,
+    }
+
+
+def test_otros_errores_de_formato(api):
+    cuerpo = {"nombre": "", "categoria": "X", "inicio": "mañana", "capacidad": 1}
+    detalle = api.post("/clases", json=cuerpo).json()["detail"]
+    assert "El campo nombre no puede estar vacío" in detalle
+    assert "Categoría debe ser uno de" in detalle
+    assert "debe ser una fecha y hora" in detalle
+    r = api.post("/solicitudes", content="{", headers={"content-type": "application/json"})
+    assert r.json()["detail"] == "El cuerpo de la petición no es un JSON válido"
+    assert api.post("/clases").json()["detail"] == "Falta el cuerpo de la petición"
+    assert "debe ser true o false" in api.post(
+        "/solicitudes/X/congelar", json={"aprobada": "si"}
+    ).json()["detail"]
+    assert api.post("/solicitudes", json={
+        "socio_id": NORMAL, "lineas": "x", "referencia": 1,
+    }).status_code == 400
+
+
+def test_los_errores_de_negocio_conservan_la_regla(api):
+    sid = crear(api).json()["id"]
+    api.post(f"/solicitudes/{sid}/activar")
+    r = api.post(f"/solicitudes/{sid}/activar")
+    assert r.status_code == 409
+    assert r.json() == {"detail": "No se puede activar una membresía activa", "regla": "RN-41"}
+
+
+def test_swagger_no_muestra_textos_tecnicos(api):
+    spec = api.get("/openapi.json").json()
+    assert "HTTPValidationError" not in spec["components"]["schemas"]
+    respuestas = spec["paths"]["/solicitudes/{solicitud_id}"]["get"]["responses"]
+    assert "422" not in respuestas and respuestas["200"]["description"] == "Operación correcta"
+    assert spec["paths"]["/solicitudes/{solicitud_id}/activar"]["post"]["summary"] == "Activar una membresía"
+    assert "RN-37" in spec["paths"]["/solicitudes/{solicitud_id}/activar"]["post"]["description"]
+
+
+def test_swagger_oculta_el_bloque_de_curl(api):
+    r = api.get("/docs")
+    assert r.status_code == 200 and ".curl-command{display:none}" in r.text

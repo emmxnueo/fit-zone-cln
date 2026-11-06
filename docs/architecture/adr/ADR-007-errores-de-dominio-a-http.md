@@ -11,7 +11,7 @@ El BRD define qué respuesta corresponde a cada fallo (Anexo B): 409 para confli
 - **Excepciones de dominio con un atributo de código y un manejador único.**
 
 ## Decisión
-`ErrorDeDominio` lleva `codigo_http` y `regla`. `ReglaDeNegocioViolada` es 422; `ConflictoDeEstado` es 409 (con `TransicionInvalida`, `CupoAgotado`, `MembresiaActivaExistente`); `NoEncontrado` es 404. `main.py` registra un manejador que devuelve `{detail, regla, error}`. El formato inválido se reasigna a 400.
+`ErrorDeDominio` lleva `codigo_http` y `regla`. `ReglaDeNegocioViolada` es 422; `ConflictoDeEstado` es 409 (con `TransicionInvalida`, `CupoAgotado`, `MembresiaActivaExistente`); `NoEncontrado` es 404. `main.py` registra un manejador que devuelve `{detail, regla}`. El formato inválido se reasigna a 400, y `api/mensajes.py` lo explica en lenguaje claro en vez de mostrar el mensaje técnico de la librería.
 
 | Código | Cuándo |
 |---|---|

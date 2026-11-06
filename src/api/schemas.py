@@ -13,58 +13,64 @@ from src.domain.state_machine import acciones_permitidas
 
 # --- entrada ----------------------------------------------------------------
 class LineaIn(BaseModel):
-    plan_id: str = Field(min_length=1, examples=["FIT-P001"])
+    plan_id: str = Field(min_length=1, examples=["FIT-P001"], description="Plan a contratar.")
     cantidad: StrictInt = Field(
-        examples=[3], description="Periodos contratados. Entero >= 1 (RN-38)."
+        examples=[3], description="Cuántos periodos se contratan. Debe ser 1 o más."
     )
 
 
 class SolicitudIn(BaseModel):
-    socio_id: str = Field(min_length=1, examples=["FIT-C001"])
-    lineas: list[LineaIn] = Field(default_factory=list)
+    socio_id: str = Field(min_length=1, examples=["FIT-C005"], description="Número de socio.")
+    lineas: list[LineaIn] = Field(default_factory=list, description="Planes que se contratan.")
     validada: StrictBool = Field(
-        default=False, description="Validación registrada por Recepción o Administrador."
+        default=False, examples=[True], description="Recepción ya revisó la solicitud."
     )
     cortesia_activa: StrictBool = Field(
-        default=False, description="Cortesía vigente autorizada por el Administrador."
+        default=False, examples=[False], description="El socio tiene una cortesía autorizada."
     )
-    referencia: str = ""
+    referencia: str = Field(default="", examples=["Mostrador"], description="Nota opcional.")
 
 
 class DecisionIn(BaseModel):
     aprobada: StrictBool = Field(
-        description="Resolución del Administrador (RN-09, RN-10, RN-30)."
+        examples=[True], description="true si el Administrador aprueba; false si rechaza."
     )
 
 
 class PagoIn(BaseModel):
-    pago_confirmado: StrictBool = Field(description="Pago confirmado (RN-08).")
+    pago_confirmado: StrictBool = Field(
+        examples=[True], description="true si el pago ya se recibió."
+    )
 
 
 class ClaseIn(BaseModel):
-    nombre: str = Field(min_length=1, examples=["Yoga"])
-    categoria: CategoriaClase
-    inicio: NaiveDatetime = Field(
-        examples=["2026-12-01T18:00:00"], description="Hora local de Monterrey, sin zona."
+    nombre: str = Field(min_length=1, examples=["Yoga"], description="Nombre de la clase.")
+    categoria: CategoriaClase = Field(
+        examples=["ESTANDAR"], description="ESTANDAR va en todos los planes; PREMIUM solo en Premium."
     )
-    capacidad: StrictInt = Field(examples=[20], description="Entero >= 1 (RN-11).")
-    instructor: str = ""
-    salon: str = ""
+    inicio: NaiveDatetime = Field(
+        examples=["2026-12-01T18:00:00"], description="Fecha y hora de Monterrey."
+    )
+    capacidad: StrictInt = Field(examples=[20], description="Lugares disponibles. Mínimo 1.")
+    instructor: str = Field(default="", examples=["Ana Ruiz"], description="Quien imparte la clase.")
+    salon: str = Field(default="", examples=["Salón 1"], description="Dónde se imparte.")
 
 
 class SocioIn(BaseModel):
-    socio_id: str = Field(min_length=1, examples=["FIT-C001"])
+    socio_id: str = Field(min_length=1, examples=["FIT-C005"], description="Número de socio.")
 
 
 class CancelacionClaseIn(BaseModel):
-    instructor: str = Field(min_length=1, examples=["Ana Ruiz"])
+    instructor: str = Field(
+        min_length=1, examples=["Ana Ruiz"], description="Nombre del instructor de la clase."
+    )
 
 
 class RelojIn(BaseModel):
     ahora: NaiveDatetime | None = Field(
         default=None,
-        description="Momento a evaluar. Si se omite, se usa el reloj del sistema; "
-                    "sirve para demostrar la tolerancia y la expiración sin esperar.",
+        examples=["2026-12-01T18:11:00"],
+        description="Opcional. Fecha y hora a simular; sin ella se usa la hora real.",
     )
 
 
@@ -208,9 +214,8 @@ class EventoOut(BaseModel):
 
 
 class ErrorOut(BaseModel):
-    detail: str
-    regla: str | None = None
-    error: str | None = None
+    detail: str = Field(description="Qué pasó, en lenguaje claro.")
+    regla: str | None = Field(default=None, description="Regla del BRD relacionada.")
 
 
 def a_salida(s: SolicitudDeMembresia) -> SolicitudOut:

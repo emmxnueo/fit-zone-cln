@@ -74,12 +74,13 @@ class SolicitudDeMembresia:
             )
         if not SolicitudProcesable().is_satisfied_by(ctx):
             raise ReglaDeNegocioViolada(
-                "La solicitud no es procesable: socio inactivo, sin líneas o sin validar",
+                "La solicitud no se puede activar: revisa que el socio esté activo, "
+                "que tenga planes y que esté validada",
                 "RN-37",
             )
         if not PlanesHabilitados().is_satisfied_by(ctx):
             raise ReglaDeNegocioViolada(
-                "La solicitud incluye un plan deshabilitado o inexistente", "RN-38"
+                "La solicitud incluye un plan que no está disponible", "RN-38"
             )
         if not CupoDisponible().is_satisfied_by(ctx):
             raise CupoAgotado("Un plan de la solicitud no tiene cupo disponible", "RN-39")
@@ -96,7 +97,7 @@ class SolicitudDeMembresia:
         nuevo = siguiente_estado(self.estado, Accion.CONGELAR)
         if not aprobada_por_administrador:
             raise ReglaDeNegocioViolada(
-                "Congelar requiere solicitud aprobada por el Administrador", "RN-09"
+                "Congelar necesita la aprobación del Administrador", "RN-09"
             )
         self.estado = nuevo
         self._registrar(ev.MembresiaCongelada(solicitud_id=self.id, socio_id=self.socio_id))
@@ -112,7 +113,7 @@ class SolicitudDeMembresia:
     def renovar(self, pago_confirmado: bool) -> None:
         nuevo = siguiente_estado(self.estado, Accion.RENOVAR)
         if not pago_confirmado:
-            raise ReglaDeNegocioViolada("Renovar exige el pago confirmado", "RN-08")
+            raise ReglaDeNegocioViolada("Renovar necesita el pago confirmado", "RN-08")
         self.estado = nuevo
         self._registrar(ev.MembresiaRenovada(solicitud_id=self.id, socio_id=self.socio_id))
 
@@ -120,7 +121,7 @@ class SolicitudDeMembresia:
         nuevo = siguiente_estado(self.estado, Accion.DAR_DE_BAJA)
         if not aprobada_por_administrador:
             raise ReglaDeNegocioViolada(
-                "La baja requiere solicitud aprobada por el Administrador", "RN-10"
+                "La baja necesita la aprobación del Administrador", "RN-10"
             )
         self.estado = nuevo
         self._registrar(ev.MembresiaDadaDeBaja(solicitud_id=self.id, socio_id=self.socio_id))

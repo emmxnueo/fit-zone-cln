@@ -47,8 +47,9 @@ def siguiente_estado(estado: EstadoMembresia, accion: AccionMembresia) -> Estado
     try:
         return TRANSICIONES[(estado, accion)]
     except KeyError:
+        verbo = accion.value.replace("_", " ")
         raise TransicionInvalida(
-            f"No se puede '{accion.value}' desde {estado.value}", "RN-41"
+            f"No se puede {verbo} una membresía {estado.value.lower()}", "RN-41"
         ) from None
 
 
@@ -80,9 +81,7 @@ def siguiente_estado_reserva(estado: EstadoReserva, accion: AccionReserva) -> Es
     try:
         return TRANSICIONES_RESERVA[(estado, accion)]
     except KeyError:
-        raise TransicionInvalida(
-            f"No se puede '{accion.value}' una reserva en {estado.value}", "RN-15"
-        ) from None
+        raise TransicionInvalida("Esta reserva ya no está confirmada", "RN-15") from None
 
 
 class EstadoClase(str, Enum):
@@ -108,7 +107,10 @@ def siguiente_estado_clase(estado: EstadoClase, accion: AccionClase) -> EstadoCl
     try:
         return TRANSICIONES_CLASE[(estado, accion)]
     except KeyError:
-        regla = "RN-29" if accion == AccionClase.SOLICITAR_CANCELACION else "RN-30"
+        if accion == AccionClase.SOLICITAR_CANCELACION:
+            raise TransicionInvalida(
+                "La clase ya tiene una solicitud de cancelación o ya fue cancelada", "RN-29"
+            ) from None
         raise TransicionInvalida(
-            f"No se puede '{accion.value}' una clase en {estado.value}", regla
+            "La clase no tiene una solicitud de cancelación pendiente", "RN-30"
         ) from None
