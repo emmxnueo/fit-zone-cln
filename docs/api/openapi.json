@@ -314,7 +314,7 @@
           "Solicitudes de membresía"
         ],
         "summary": "Activar (SOLICITADA → ACTIVA)",
-        "description": "Exige RN-37 (procesable), RN-38 (plan habilitado), RN-03 (una sola membresía activa) y RN-39 (cupo).",
+        "description": "Exige RN-03 (una sola membresía activa), RN-37 (procesable), RN-38 (plan habilitado) y RN-39 (cupo).",
         "operationId": "activar_solicitudes__solicitud_id__activar_post",
         "parameters": [
           {
@@ -2201,6 +2201,13 @@
           "type": {
             "type": "string",
             "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
         "type": "object",

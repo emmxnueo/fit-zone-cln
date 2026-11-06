@@ -81,7 +81,7 @@ Recorre el camino **necesidad (BN) → historia (US) y Gherkin → regla (RN) �
 | `GET /solicitudes`, `GET /solicitudes/{id}` | Listar y consultar | | 200, 404 | `API::test_consultar_y_listar` |
 | `GET /solicitudes/{id}/procesable` | Evaluar RN-37 | RN-37 | 200, 404 | `API::test_procesable_explica_los_motivos` |
 | `GET /solicitudes/{id}/beneficio-referencia` | Evaluar RN-40 | RN-40 | 200, 404 | `API::test_beneficio_de_referencia` |
-| `POST /solicitudes/{id}/activar` | SOLICITADA → ACTIVA | RN-37, RN-38, RN-03, RN-39, RN-41 | 200, 404, 409, 422 | `API::test_activar_y_repetir_aprobacion` |
+| `POST /solicitudes/{id}/activar` | SOLICITADA → ACTIVA | RN-41, RN-03, RN-37, RN-38, RN-39 | 200, 404, 409, 422 | `API::test_activar_y_repetir_aprobacion` |
 | `POST /solicitudes/{id}/cancelar` | SOLICITADA → CANCELADA | RN-41 | 200, 404, 409 | `API::test_cancelar_y_no_se_puede_dos_veces` |
 | `POST /solicitudes/{id}/congelar` | ACTIVA → SUSPENDIDA | RN-09, RN-41 | 200, 400, 404, 409, 422 | `API::test_congelar_descongelar_y_rn09` |
 | `POST /solicitudes/{id}/descongelar` | SUSPENDIDA → ACTIVA | RN-41 | 200, 404, 409 | `API::test_congelar_descongelar_y_rn09` |

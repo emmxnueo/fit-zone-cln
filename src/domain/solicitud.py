@@ -68,6 +68,10 @@ class SolicitudDeMembresia:
     # --- comandos (cada uno pasa por la máquina de estados) -----------------
     def activar(self, ctx: ContextoSolicitud) -> None:
         nuevo = siguiente_estado(self.estado, Accion.ACTIVAR)  # 409 si no procede
+        if not SinMembresiaActiva().is_satisfied_by(ctx):  # primero RN-03 (BPMN 12.1)
+            raise MembresiaActivaExistente(
+                "El socio ya tiene una membresía activa", "RN-03"
+            )
         if not SolicitudProcesable().is_satisfied_by(ctx):
             raise ReglaDeNegocioViolada(
                 "La solicitud no es procesable: socio inactivo, sin líneas o sin validar",
@@ -76,10 +80,6 @@ class SolicitudDeMembresia:
         if not PlanesHabilitados().is_satisfied_by(ctx):
             raise ReglaDeNegocioViolada(
                 "La solicitud incluye un plan deshabilitado o inexistente", "RN-38"
-            )
-        if not SinMembresiaActiva().is_satisfied_by(ctx):
-            raise MembresiaActivaExistente(
-                "El socio ya tiene una membresía activa", "RN-03"
             )
         if not CupoDisponible().is_satisfied_by(ctx):
             raise CupoAgotado("Un plan de la solicitud no tiene cupo disponible", "RN-39")

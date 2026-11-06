@@ -125,3 +125,11 @@ def test_puede_procesarse_y_beneficio_delegan_en_specifications():
     s = solicitud(lineas=((("P1", "500"), 3),))
     ctx = contexto(s, premium=True)
     assert s.puede_procesarse(ctx) and s.aplica_beneficio_de_referencia(ctx)
+
+
+def test_rn03_se_valida_antes_que_la_solicitud_procesable():
+    """BPMN 12.1: primero ¿ya tiene membresía activa? (409) y después RN-37 (422)."""
+    s = solicitud(validada=False)
+    with pytest.raises(MembresiaActivaExistente) as e:
+        s.activar(contexto(s, activas=1))
+    assert e.value.regla == "RN-03"

@@ -7,7 +7,7 @@ Es la tabla `TRANSICIONES` de `src/domain/state_machine.py` (RN-41). Cualquier p
 ```mermaid
 stateDiagram-v2
   [*] --> SOLICITADA : crear solicitud
-  SOLICITADA --> ACTIVA : activar [RN-37, RN-38, RN-03, RN-39]
+  SOLICITADA --> ACTIVA : activar [RN-03, RN-37, RN-38, RN-39]
   SOLICITADA --> CANCELADA : cancelar
   ACTIVA --> SUSPENDIDA : congelar [RN-09, aprobada por Administrador]
   SUSPENDIDA --> ACTIVA : descongelar
@@ -118,7 +118,7 @@ sequenceDiagram
   REP-->>SV: datos para el contexto
   SV->>AG: activar(ctx)
   AG->>AG: siguiente_estado(SOLICITADA, ACTIVAR)  (RN-41)
-  AG->>AG: Specifications: procesable, planes habilitados, sin membresía activa, cupo
+  AG->>AG: Specifications: sin membresía activa, procesable, planes habilitados, cupo
   alt alguna regla falla
     AG-->>SV: ErrorDeDominio (409 o 422)
     SV-->>API: propaga el error, no guarda ni publica

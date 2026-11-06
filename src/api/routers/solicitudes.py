@@ -72,8 +72,8 @@ def beneficio_de_referencia(solicitud_id: str, svc: Servicio):
 
 @router.post("/{solicitud_id}/activar", response_model=SolicitudOut,
              summary="Activar (SOLICITADA → ACTIVA)",
-             description="Exige RN-37 (procesable), RN-38 (plan habilitado), "
-                         "RN-03 (una sola membresía activa) y RN-39 (cupo).",
+             description="Exige RN-03 (una sola membresía activa), RN-37 (procesable), "
+                         "RN-38 (plan habilitado) y RN-39 (cupo).",
              responses={**_404, **_409, **_422})
 def activar(solicitud_id: str, svc: Servicio):
     return a_salida(svc.activar(solicitud_id))

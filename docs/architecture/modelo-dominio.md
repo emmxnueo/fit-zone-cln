@@ -147,7 +147,7 @@ El agregado `SolicitudDeMembresia` es la única puerta para cambiar el estado: t
 
 | Evento | Lo emite | Regla |
 |---|---|---|
-| `MembresiaActivada` | `activar()` | RN-37, RN-38, RN-03, RN-39 |
+| `MembresiaActivada` | `activar()` | RN-03, RN-37, RN-38, RN-39 |
 | `MembresiaCongelada` | `congelar()` | RN-09 |
 | `MembresiaDescongelada` | `descongelar()` | RN-41 |
 | `MembresiaVencida` | `vencer()` | RN-04 |
