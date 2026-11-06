@@ -1,21 +1,46 @@
-"""El flujo de clases sobre los repositorios SQL (SQLite en memoria)."""
+"""El flujo de clases sobre los repositorios SQL: siempre en SQLite y, si
+DATABASE_URL apunta a PostgreSQL (Docker y CI), también ahí."""
+import os
 from datetime import timedelta
+from uuid import uuid4
 
 import pytest
+from sqlalchemy import text
 
 from src.domain.clase import EstadoEntrada
 from src.domain.specifications import CategoriaClase
 from src.domain.state_machine import EstadoReserva
 from src.infrastructure.composicion import crear_servicios_sql, sembrar_clases_si_vacio
+from src.infrastructure.db import crear_motor
 from src.infrastructure.reloj import RelojDelSistema
 from tests.unit.application.test_clases import INICIO
 from tests.unit.domain.helpers import RelojFijo
 
 
+@pytest.fixture(params=["sqlite", "postgresql"])
+def url(request):
+    """En PostgreSQL cada prueba usa un esquema temporal: no toca los datos de la base."""
+    if request.param == "sqlite":
+        yield "sqlite://"
+        return
+    base = os.getenv("DATABASE_URL", "")
+    if not base.startswith("postgres"):
+        pytest.skip("DATABASE_URL no apunta a PostgreSQL")
+    esquema = f"prueba_{uuid4().hex[:8]}"
+    motor = crear_motor(base)
+    with motor.begin() as c:
+        c.execute(text(f"CREATE SCHEMA {esquema}"))
+    separador = "&" if "?" in base else "?"
+    yield f"{base}{separador}options=-csearch_path%3D{esquema}"
+    with motor.begin() as c:
+        c.execute(text(f"DROP SCHEMA {esquema} CASCADE"))
+    motor.dispose()
+
+
 @pytest.fixture
-def entorno():
+def entorno(url):
     reloj = RelojFijo(INICIO - timedelta(days=1))
-    s = crear_servicios_sql("sqlite://", con_solicitudes=False, reloj=reloj)
+    s = crear_servicios_sql(url, con_solicitudes=False, reloj=reloj)
     socios = ["FIT-C001", "FIT-C002", "FIT-C003"]
     plan = next(p.id for p in s.membresias.planes.todos().values() if p.habilitado and p.cupo >= 3)
     for socio in socios:

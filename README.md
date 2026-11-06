@@ -145,7 +145,8 @@ uvicorn src.api.main:app --reload     # sin DATABASE_URL usa memoria
 ## Pruebas y CI/CD
 
 - Pruebas unitarias (`tests/unit`) e integración (`tests/integration`) con
-  `pytest`; los repositorios SQL se prueban sobre SQLite en memoria.
+  `pytest`; los repositorios SQL se prueban sobre SQLite en memoria y el flujo de
+  reservas también sobre PostgreSQL cuando `DATABASE_URL` apunta a uno.
 - GitHub Actions (`.github/workflows/ci.yml`) corre las pruebas contra un
   PostgreSQL 16 y **falla si la cobertura baja de 80%**.
 - Evidencia de los datos del paquete del PIA: `docs/evidencia/`
