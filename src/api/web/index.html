@@ -571,7 +571,7 @@ async function elegirRol(clave) {
 function pantallaEntrada() {
   return el("div", { class: "entrada" },
     el("div", { class: "marca" }, "FITZONE"),
-    el("h1", {}, "¿Con qué rol vas a entrar?"),
+    el("h1", {}, "¿Con qué rol le gustaría a entrar?"),
     el("p", {}, "Cada rol muestra solo sus acciones."),
     el("div", { class: "roles" }, Object.entries(ROLES).map(([clave, rol]) => el("button", {
       type: "button", class: "rol", "data-rol": clave, onclick: () => elegirRol(clave),
