@@ -90,8 +90,17 @@ def test_no_se_reserva_clase_iniciada():
 def test_reserva_repetida_es_conflicto():
     c = clase(capacidad=2)
     c.reservar(ctx())
-    with pytest.raises(ConflictoDeEstado):
+    with pytest.raises(ConflictoDeEstado) as e:
         c.reservar(ctx())
+    assert e.value.regla == "RN-24"
+
+
+def test_la_elegibilidad_se_valida_antes_que_el_duplicado():
+    """BPMN 12.2: primero ¿es elegible? (422) y después ¿ya reservó? (409)."""
+    c = clase(capacidad=2)
+    c.reservar(ctx())
+    with pytest.raises(ReglaDeNegocioViolada):
+        c.reservar(ctx(vigente=False))
 
 
 def test_registro_duplicado_conserva_la_posicion():
@@ -103,16 +112,20 @@ def test_registro_duplicado_conserva_la_posicion():
 
 
 # --- US-14: cancelar --------------------------------------------------------
-@pytest.mark.parametrize("anticipacion, estado, evento", [
-    (timedelta(hours=2), EstadoReserva.CANCELADA, ev.ReservaCancelada),
-    (timedelta(hours=1), EstadoReserva.CANCELADA, ev.ReservaCancelada),
-    (timedelta(minutes=59), EstadoReserva.CANCELADA_TARDE, ev.CancelacionTardiaRegistrada),
+A_TIEMPO = [ev.ReservaCancelada, ev.LugarLiberado]
+TARDE = [ev.ReservaCancelada, ev.CancelacionTardiaRegistrada, ev.LugarLiberado]
+
+
+@pytest.mark.parametrize("anticipacion, estado, eventos", [
+    (timedelta(hours=2), EstadoReserva.CANCELADA, A_TIEMPO),
+    (timedelta(hours=1), EstadoReserva.CANCELADA, A_TIEMPO),
+    (timedelta(minutes=59), EstadoReserva.CANCELADA_TARDE, TARDE),
 ])
-def test_cancelacion_segun_anticipacion(anticipacion, estado, evento):
+def test_cancelacion_segun_anticipacion(anticipacion, estado, eventos):
     c, r = llena_con_lista()
     c.cancelar_reserva(r, INICIO - anticipacion)
     assert r.estado == estado and c.lugares_libres == 1
-    assert tipos(c) == [evento]
+    assert tipos(c) == eventos
 
 
 def test_cancelar_dos_veces_es_409():
@@ -136,7 +149,7 @@ def test_lugar_liberado_se_ofrece_al_primero_y_queda_apartado():
     assert c.oferta_activa.socio_id == "A"
     assert [x.socio_id for x in c.en_espera] == ["B"]
     assert c.lugares_libres == 0
-    assert ev.LugarOfrecido in tipos(c)
+    assert ev.LugarOfrecidoASocio in tipos(c)
 
 
 def test_el_orden_depende_solo_del_registro():
@@ -187,7 +200,7 @@ def test_oferta_vencida_pasa_al_siguiente():
     c = ofertada()
     c.expirar_oferta(ANTES + timedelta(minutes=16))
     assert c.oferta_activa.socio_id == "B"
-    assert tipos(c) == [ev.OfertaExpirada, ev.LugarOfrecido]
+    assert tipos(c) == [ev.OfertaDeLugarExpirada, ev.LugarOfrecidoASocio]
 
 
 def test_a_los_15_minutos_la_oferta_no_expira():
@@ -235,7 +248,7 @@ def test_retraso_mayor_a_10_minutos_asigna_al_presente():
     assert r.estado == EstadoReserva.NO_SHOW
     assert [x.socio_id for x in c.confirmadas] == ["B"]
     assert [x.socio_id for x in c.en_espera] == ["A"]
-    assert tipos(c) == [ev.NoShowRegistrado, ev.LugarAsignado]
+    assert tipos(c) == [ev.NoShowRegistrado, ev.LugarLiberado, ev.ReservaConfirmada]
 
 
 def test_a_los_10_minutos_exactos_no_se_libera():
@@ -261,7 +274,7 @@ def test_titular_presente_conserva_su_lugar_y_reaplicar_no_duplica():
     c.aplicar_tolerancia(INICIO + timedelta(minutes=12), {"T"}, set())
     assert r.estado == EstadoReserva.CONFIRMADA
     c.aplicar_tolerancia(INICIO + timedelta(minutes=13), set(), set())
-    assert tipos(c) == [ev.NoShowRegistrado]
+    assert tipos(c) == [ev.NoShowRegistrado, ev.LugarLiberado]
     c.aplicar_tolerancia(INICIO + timedelta(minutes=14), set(), set())
     assert tipos(c) == []
 

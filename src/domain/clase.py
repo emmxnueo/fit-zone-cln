@@ -116,11 +116,11 @@ class Clase:
         socio_id = ctx.socio.id
         if ctx.ahora >= self.inicio:
             raise ConflictoDeEstado("La clase ya inició", "RN-13")
+        exigir_elegibilidad(ctx)
         if any(r.socio_id == socio_id for r in self.confirmadas):
-            raise ConflictoDeEstado("El socio ya tiene una reserva en esta clase")
+            raise ConflictoDeEstado("El socio ya tiene una reserva en esta clase", "RN-24")
         if self._esta_en_lista(socio_id):
             raise ConflictoDeEstado("El socio ya está en la lista de espera", "RN-24")
-        exigir_elegibilidad(ctx)
         if self.lugares_libres > 0 and not self.en_espera:
             return self._confirmar(socio_id, ctx.ahora)
         entrada = EntradaListaEspera(
@@ -140,8 +140,11 @@ class Clase:
         if ahora >= self.inicio:
             raise ConflictoDeEstado("La clase ya inició", "RN-17")
         reserva.estado = nuevo
-        tipo = ev.CancelacionTardiaRegistrada if tarde else ev.ReservaCancelada
-        self._eventos.append(tipo(socio_id=reserva.socio_id, clase_id=self.id, reserva_id=reserva.id))
+        datos = {"socio_id": reserva.socio_id, "clase_id": self.id, "reserva_id": reserva.id}
+        self._eventos.append(ev.ReservaCancelada(**datos))
+        if tarde:
+            self._eventos.append(ev.CancelacionTardiaRegistrada(**datos))
+        self._eventos.append(ev.LugarLiberado(socio_id=reserva.socio_id, clase_id=self.id))
         self._ofrecer_siguiente(ahora)
 
     def confirmar_oferta(self, ctx: ContextoReserva) -> Reserva:
@@ -162,7 +165,7 @@ class Clase:
         oferta = self.oferta_activa
         if oferta is not None and self._oferta_vencida(oferta, ahora):
             oferta.estado = EstadoEntrada.EXPIRADA
-            self._eventos.append(ev.OfertaExpirada(socio_id=oferta.socio_id, clase_id=self.id))
+            self._eventos.append(ev.OfertaDeLugarExpirada(socio_id=oferta.socio_id, clase_id=self.id))
         self._ofrecer_siguiente(ahora)
 
     def aplicar_tolerancia(
@@ -181,6 +184,7 @@ class Clase:
             self._eventos.append(ev.NoShowRegistrado(
                 socio_id=reserva.socio_id, clase_id=self.id, reserva_id=reserva.id
             ))
+            self._eventos.append(ev.LugarLiberado(socio_id=reserva.socio_id, clase_id=self.id))
             self._asignar_a_presente(ahora, asignables)
 
     # --- internos -----------------------------------------------------------
@@ -210,7 +214,9 @@ class Clase:
         if espera:
             espera[0].estado = EstadoEntrada.OFERTADA
             espera[0].ofertada_en = ahora
-            self._eventos.append(ev.LugarOfrecido(socio_id=espera[0].socio_id, clase_id=self.id))
+            self._eventos.append(
+                ev.LugarOfrecidoASocio(socio_id=espera[0].socio_id, clase_id=self.id)
+            )
 
     def _asignar_a_presente(self, ahora: datetime, asignables: Collection[str]) -> None:
         """RN-21: el primero de la lista que esté presente y elegible, sin oferta."""
@@ -218,8 +224,4 @@ class Clase:
         if entrada is None:
             return  # RN-23: el lugar queda libre, no es un error
         entrada.estado = EstadoEntrada.ASIGNADA
-        reserva = Reserva(f"RES-{uuid4().hex[:8].upper()}", entrada.socio_id, ahora)
-        self.reservas.append(reserva)
-        self._eventos.append(ev.LugarAsignado(
-            socio_id=entrada.socio_id, clase_id=self.id, reserva_id=reserva.id
-        ))
+        self._confirmar(entrada.socio_id, ahora)

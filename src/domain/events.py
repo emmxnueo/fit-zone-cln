@@ -82,18 +82,18 @@ class NoShowRegistrado(EventoDeDominio):
 
 
 @dataclass(frozen=True, kw_only=True)
-class LugarOfrecido(EventoDeDominio):
+class LugarLiberado(EventoDeDominio):
     pass
 
 
 @dataclass(frozen=True, kw_only=True)
-class OfertaExpirada(EventoDeDominio):
+class LugarOfrecidoASocio(EventoDeDominio):
     pass
 
 
 @dataclass(frozen=True, kw_only=True)
-class LugarAsignado(EventoDeDominio):
-    reserva_id: str = ""
+class OfertaDeLugarExpirada(EventoDeDominio):
+    pass
 
 
 @dataclass(frozen=True, kw_only=True)

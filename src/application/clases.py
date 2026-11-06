@@ -147,8 +147,9 @@ class ServicioDeClases:
             for e in eventos:
                 cuenta[type(e)] = cuenta.get(type(e), 0) + 1
         return ResumenReloj(
-            cuenta.get(ev.OfertaExpirada, 0), cuenta.get(ev.LugarOfrecido, 0),
-            cuenta.get(ev.NoShowRegistrado, 0), cuenta.get(ev.LugarAsignado, 0),
+            cuenta.get(ev.OfertaDeLugarExpirada, 0), cuenta.get(ev.LugarOfrecidoASocio, 0),
+            cuenta.get(ev.NoShowRegistrado, 0),
+            cuenta.get(ev.ReservaConfirmada, 0),  # en el reloj solo confirma RN-21
         )
 
     # --- internos -----------------------------------------------------------
