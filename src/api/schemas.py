@@ -165,6 +165,34 @@ class IngresoOut(BaseModel):
     momento: datetime
 
 
+class IngresosPorHoraOut(BaseModel):
+    hora: int
+    ingresos: int
+
+
+class IngresosPorDiaOut(BaseModel):
+    dia: str
+    ingresos: int
+
+
+class AfluenciaOut(BaseModel):
+    desde: date
+    hasta: date
+    total: int
+    por_hora: list[IngresosPorHoraOut]
+    por_dia: list[IngresosPorDiaOut]
+
+
+class DemandaOut(BaseModel):
+    clase_id: str
+    nombre: str
+    inicio: datetime
+    capacidad: int
+    reservas_confirmadas: int
+    ocupacion_pct: str = Field(description='Porcentaje como texto decimal, por ejemplo "100.00".')
+    en_lista_de_espera: int
+
+
 class EventoOut(BaseModel):
     evento: str
     solicitud_id: str

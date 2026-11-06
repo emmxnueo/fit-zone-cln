@@ -24,13 +24,14 @@ Materia: Componentes de Lógica de Negocio · Profesor: Miguel Ángel Gómez Mar
 ## ¿Qué hace el sistema?
 
 FitZone es un gimnasio que vende membresías y ofrece clases grupales. Este
-repositorio implementa dos módulos:
+repositorio implementa tres módulos:
 
 - **Clases y reservas:** catálogo, reservas, lista de espera FIFO con oferta de
   15 minutos, tolerancia de retraso, no-shows y sanción automática.
 - **Contratación de membresías:** una *solicitud de membresía* nace en
   `SOLICITADA` y avanza por una máquina de estados (RN-41). Una membresía
   `ACTIVA` es lo que permite ingresar y reservar.
+- **Reportes:** afluencia por hora y día de la semana, y demanda por clase.
 
 ```
 SOLICITADA ──activar──▶ ACTIVA ──congelar──▶ SUSPENDIDA
@@ -49,7 +50,8 @@ plan, RN-40 beneficio de referencia y RN-41 transiciones válidas.
 
 En reservas: RN-05 ingreso, RN-11 capacidad, RN-13 elegibilidad, RN-14 categorías
 (sin cobro del costo adicional), RN-15 a RN-18 cancelación y no-show, RN-19 a
-RN-24 lista de espera, y RN-25 a RN-28 faltas y sanción.
+RN-24 lista de espera, y RN-25 a RN-28 faltas y sanción. En reportes: RN-35
+afluencia y RN-36 demanda.
 
 ## Arquitectura
 
@@ -102,6 +104,8 @@ La documentación de análisis y arquitectura está en `docs/`
 | POST | `/clases/procesar-reloj` | Expira ofertas y aplica la tolerancia; acepta `ahora` para la demostración |
 | GET | `/socios/{id}` | Faltas y sanción |
 | POST | `/socios/{id}/ingresos` | Registrar ingreso (RN-05) |
+| GET | `/reportes/afluencia?desde=&hasta=` | Ingresos por hora y día de la semana (RN-35) |
+| GET | `/reportes/demanda` | Ocupación y lista de espera por clase (RN-36) |
 | GET | `/planes` | Catálogo de planes |
 | GET | `/eventos` | Domain Events publicados |
 | GET | `/health` | Estado del servicio |
@@ -190,17 +194,20 @@ Reservas (después de activar una membresía a cada socio, con los pasos 3 y 5):
     `POST /clases/procesar-reloj` con un `ahora` 16 minutos después para expirarla.
 12. Para ver un no-show, llamar `procesar-reloj` con un `ahora` 11 minutos después del
     inicio; `GET /socios/{id}` muestra la falta y, a la tercera del mes, la sanción.
+13. `GET /reportes/demanda` muestra la ocupación y la lista de espera de cada clase.
+    Con un ingreso registrado (`POST /socios/{id}/ingresos`), `GET /reportes/afluencia`
+    con la fecha de hoy en `desde` y `hasta` lo muestra por hora y día.
 
 ## Alcance y relación con el análisis
 
 El BRD completo de FitZone vive en `docs/BRD.md`. El código implementa la
 **contratación de membresías** (BN-09 y BN-10), que es lo que usa el paquete de
-datos del PIA, y **clases, reservas, lista de espera y sanciones** (BN-01 y
-BN-02). Las diferencias entre el paquete y el BRD están documentadas en el
+datos del PIA, **clases, reservas, lista de espera y sanciones** (BN-01 y BN-02)
+y **reportes** (BN-04 y BN-05). Las diferencias entre el paquete y el BRD están documentadas en el
 Anexo B del reporte, y el estado de cada regla en
 `docs/architecture/trazabilidad.md`.
 
-Quedan solo diseñados los reportes, la cancelación de clases, las excepciones,
+Quedan solo diseñados la cancelación de clases, las excepciones,
 el alta con edad y deslinde, y el cambio de plan. Las notificaciones se publican
 como eventos, sin canal real, y `POST /clases/procesar-reloj` necesita una tarea
 programada externa que lo llame.

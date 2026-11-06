@@ -267,3 +267,14 @@ class RepositorioIngresosSQL:
                     IngresoRow.momento >= desde, IngresoRow.momento < desde + timedelta(days=1)
                 )
             ))
+
+    def entre(self, desde: date, hasta: date) -> list[datetime]:
+        """RN-35: momentos de los ingresos del rango, con ambas fechas incluidas."""
+        inicio = datetime.combine(desde, time.min)
+        fin = datetime.combine(hasta, time.min) + timedelta(days=1)
+        with self._sesiones() as s:
+            return list(s.scalars(
+                select(IngresoRow.momento).where(
+                    IngresoRow.momento >= inicio, IngresoRow.momento < fin
+                )
+            ))

@@ -9,7 +9,7 @@ Se comparó Transaction Script, Table Module y Domain Model con los criterios de
 | Patrón | Decisión | Razón en FitZone |
 |---|---|---|
 | **Domain Model** | Núcleo del sistema | Más de diez reglas encadenadas con límites ajustables (1 h, 2 h, 10 min, 15 min, 3 faltas, 7 días); cada regla vive en el concepto dueño |
-| **Table Module** | Solo reportes (BN-04, BN-05) | Son lecturas sin cambio de estado; fuera del alcance del código |
+| **Table Module** | Solo reportes (BN-04, BN-05), en `application/reportes.py` | Son lecturas sin cambio de estado; agrupan datos sin pasar por las reglas de los agregados |
 | Transaction Script | Descartado | Duplicaría la cadena de lista de espera y la sanción entre flujos |
 
 ## 2. Patrones aplicados en el código
@@ -23,7 +23,7 @@ Se comparó Transaction Script, Table Module y Domain Model con los criterios de
 | **Domain Events** | `domain/events.py`, `pull_events()` | El agregado registra lo que pasó; los suscriptores reaccionan sin que el dominio los conozca (RN-34) | Que el dominio llame directo al envío de avisos |
 | **Repository** | Puertos en `application/puertos.py`; adaptadores en `infrastructure/` | El dominio y los casos de uso no saben si hay PostgreSQL o memoria | Consultas SQL dentro de los casos de uso |
 | **Ports and Adapters (hexagonal)** | `Protocol` + `composicion.py` | Cambiar la base de datos sin tocar el negocio; probar sin base ([ADR-006](adr/ADR-006-puertos-y-adaptadores.md)) | Dependencia directa de SQLAlchemy desde la aplicación |
-| **Service Layer** | `ServicioDeMembresias`, `ServicioDeClases` | Un método por caso de uso: carga, ejecuta el comando de dominio, guarda y publica. No contiene reglas | Reglas dentro de los routers |
+| **Service Layer** | `ServicioDeMembresias`, `ServicioDeClases`, `ServicioDeReportes` | Un método por caso de uso: carga, ejecuta el comando de dominio, guarda y publica. No contiene reglas | Reglas dentro de los routers |
 | **DTO** | `api/schemas.py` (Pydantic) | Contratos de entrada y salida de la API, separados de las entidades | Exponer las entidades directamente |
 | **Publisher / Observer** | `PublicadorEnMemoria.suscribir()`; `ServicioDeClases` se suscribe a `NoShowRegistrado` y `CancelacionTardiaRegistrada` | Suscribir manejadores por tipo de evento; así la falta llega al Socio sin que la Clase lo conozca (ADR-003) | Acoplar cada caso de uso a sus efectos |
 | **Dependency Injection** | `api/dependencias.py` con `Depends` | Reemplazar el servicio en pruebas (`dependency_overrides`) | Singletons globales fijos |
@@ -37,4 +37,3 @@ Traducción de errores: los errores de dominio llevan su código HTTP y un manej
 | Unit of Work explícito | No se implementó: cada `guardar` abre y cierra su propia sesión. Cada comando modifica un agregado; la falta llega al Socio después por evento, con consistencia eventual (ADR-003). Si ese segundo paso falla, la clase ya quedó guardada |
 | CQRS básico (Commands, Queries, DTO de lectura) | Aplicado de forma ligera: las consultas (`obtener`, `listar`, `evaluar_*`) no cambian estado; no hay modelos de lectura separados |
 | Domain Services (ElegibilidadDeReserva, CalculoDeCambioDePlan) | `ElegibilidadDeReserva` se resolvió con la Specification `ElegibleParaReservar`; `CalculoDeCambioDePlan` sigue diseñado, fuera del alcance del código |
-| Table Module para reportes | Diseñado; fuera del alcance del código |

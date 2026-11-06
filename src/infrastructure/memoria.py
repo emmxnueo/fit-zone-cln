@@ -96,6 +96,10 @@ class RepositorioIngresosMemoria:
         """RN-18: presente es tener un ingreso registrado ese día."""
         return {socio_id for socio_id, momento in self._ingresos if momento.date() == dia}
 
+    def entre(self, desde: date, hasta: date) -> list[datetime]:
+        """RN-35: momentos de los ingresos del rango, con ambas fechas incluidas."""
+        return [m for _, m in self._ingresos if desde <= m.date() <= hasta]
+
 
 class PublicadorEnMemoria:
     """Publica Domain Events a suscriptores y guarda un registro de lo publicado."""

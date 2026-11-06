@@ -1,8 +1,9 @@
-"""API de clases, reservas, lista de espera, ingresos y sanciones."""
+"""API de clases, reservas, lista de espera, ingresos, sanciones y reportes."""
 from datetime import datetime, timedelta
 
-from src.api.dependencias import get_servicio_clases
+from src.api.dependencias import get_servicio_clases, get_servicio_reportes
 from src.application.clases import ServicioDeClases
+from src.application.reportes import ServicioDeReportes
 from src.infrastructure.csv_loader import cargar_paquete
 from src.infrastructure.reloj import RelojDelSistema
 
@@ -130,3 +131,33 @@ def test_ingreso_sin_membresia_es_422(api):
     assert r.status_code == 422 and r.json()["regla"] == "RN-05"
     assert api.post("/socios/NADIE/ingresos").status_code == 404
     assert api.get("/socios/NADIE").status_code == 404
+
+
+def test_reporte_de_afluencia(api):
+    a = con_membresia(api, NORMALES[0])
+    api.post(f"/socios/{a}/ingresos")
+    hoy = RelojDelSistema().ahora().date().isoformat()
+    r = api.get("/reportes/afluencia", params={"desde": hoy, "hasta": hoy})
+    assert r.status_code == 200 and r.json()["total"] == 1
+    assert len(r.json()["por_hora"]) == 24 and len(r.json()["por_dia"]) == 7
+
+
+def test_reporte_de_afluencia_con_rango_invalido(api):
+    r = api.get("/reportes/afluencia", params={"desde": "2026-11-02", "hasta": "2026-11-01"})
+    assert r.status_code == 422 and r.json()["regla"] == "RN-35"
+    assert api.get("/reportes/afluencia", params={"desde": "ayer", "hasta": "hoy"}).status_code == 400
+    assert api.get("/reportes/afluencia").status_code == 400
+
+
+def test_reporte_de_demanda(api):
+    a, b = (con_membresia(api, s) for s in NORMALES[:2])
+    clase = crear_clase(api)
+    reservar(api, clase, a)
+    reservar(api, clase, b)
+    d = api.get("/reportes/demanda").json()[0]
+    assert d["clase_id"] == clase["id"]
+    assert d["ocupacion_pct"] == "100.00" and d["en_lista_de_espera"] == 1
+
+
+def test_dependencia_por_defecto_entrega_el_servicio_de_reportes():
+    assert isinstance(get_servicio_reportes(), ServicioDeReportes)

@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from src.api.dependencias import get_servicio, get_servicio_clases
+from src.api.dependencias import get_servicio, get_servicio_clases, get_servicio_reportes
 from src.api.main import app
 from src.infrastructure.composicion import crear_servicios_en_memoria
 
@@ -12,5 +12,6 @@ def api():
     s = crear_servicios_en_memoria(con_solicitudes=False)
     app.dependency_overrides[get_servicio] = lambda: s.membresias
     app.dependency_overrides[get_servicio_clases] = lambda: s.clases
+    app.dependency_overrides[get_servicio_reportes] = lambda: s.reportes
     yield TestClient(app)
     app.dependency_overrides.clear()

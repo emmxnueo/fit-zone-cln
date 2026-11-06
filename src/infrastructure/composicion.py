@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from src.application.clases import ServicioDeClases
 from src.application.puertos import RepositorioClases, Reloj
+from src.application.reportes import ServicioDeReportes
 from src.application.servicio import ServicioDeMembresias
 from src.domain.clase import Clase
 from src.domain.specifications import CategoriaClase
@@ -41,10 +42,11 @@ from .repositorios_sql import (
 
 @dataclass(frozen=True)
 class Servicios:
-    """Los dos módulos comparten socios, solicitudes y publicador."""
+    """Los módulos comparten repositorios y publicador."""
 
     membresias: ServicioDeMembresias
     clases: ServicioDeClases
+    reportes: ServicioDeReportes
 
 
 def sembrar_clases_si_vacio(repo: RepositorioClases, reloj: Reloj) -> None:
@@ -75,14 +77,14 @@ def crear_servicios_en_memoria(
     socios = RepositorioSociosMemoria(p.socios)
     solicitudes = RepositorioSolicitudesMemoria(p.solicitudes if con_solicitudes else {})
     clases = RepositorioClasesMemoria()
+    ingresos = RepositorioIngresosMemoria()
     publicador = PublicadorEnMemoria()
     if con_solicitudes:
         sembrar_clases_si_vacio(clases, reloj)
     return Servicios(
         ServicioDeMembresias(socios, RepositorioPlanesMemoria(p.planes), solicitudes, publicador),
-        ServicioDeClases(
-            socios, solicitudes, clases, RepositorioIngresosMemoria(), publicador, reloj
-        ),
+        ServicioDeClases(socios, solicitudes, clases, ingresos, publicador, reloj),
+        ServicioDeReportes(clases, ingresos),
     )
 
 
@@ -128,14 +130,14 @@ def crear_servicios_sql(
     socios = RepositorioSociosSQL(sesiones)
     solicitudes = RepositorioSolicitudesSQL(sesiones)
     clases = RepositorioClasesSQL(sesiones)
+    ingresos = RepositorioIngresosSQL(sesiones)
     publicador = PublicadorEnMemoria()
     if con_solicitudes:
         sembrar_clases_si_vacio(clases, reloj)
     return Servicios(
         ServicioDeMembresias(socios, RepositorioPlanesSQL(sesiones), solicitudes, publicador),
-        ServicioDeClases(
-            socios, solicitudes, clases, RepositorioIngresosSQL(sesiones), publicador, reloj
-        ),
+        ServicioDeClases(socios, solicitudes, clases, ingresos, publicador, reloj),
+        ServicioDeReportes(clases, ingresos),
     )
 
 

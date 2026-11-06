@@ -16,7 +16,7 @@ Domain Model para membresías, reservas, lista de espera, no-shows y autorizacio
 ## Consecuencias
 - Beneficio: cada regla se escribe en un solo lugar; menos estados inválidos.
 - Costo: más diseño inicial y el equipo debe dominar agregados y repositorios.
-- En el código: `SolicitudDeMembresia`, `Clase` y `Socio` son los agregados que protegen sus invariantes.
+- En el código: `SolicitudDeMembresia`, `Clase` y `Socio` son los agregados que protegen sus invariantes; `application/reportes.py` es el Table Module.
 - Riesgo: los reportes dependen de cómo se guarden los datos.
 
 ## Trazabilidad

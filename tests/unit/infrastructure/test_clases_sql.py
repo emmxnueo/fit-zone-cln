@@ -93,3 +93,17 @@ def test_siembra_clases_una_sola_vez():
 
 def test_reloj_del_sistema_no_tiene_zona():
     assert RelojDelSistema().ahora().tzinfo is None
+
+
+def test_reportes_leen_lo_persistido(entorno):
+    s, (t, a, _), reloj = entorno
+    c = s.clases.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO, 1)
+    s.clases.reservar(c.id, t)
+    s.clases.reservar(c.id, a)
+    s.clases.registrar_ingreso(t)  # hoy, un día antes de la clase
+    dia = reloj.ahora().date()
+    afluencia = s.reportes.afluencia(dia, dia)
+    assert afluencia.total == 1 and afluencia.por_hora[reloj.ahora().hour] == 1
+    assert s.reportes.afluencia(dia + timedelta(days=1), dia + timedelta(days=1)).total == 0
+    demanda = s.reportes.demanda()[0]
+    assert (demanda.reservas_confirmadas, demanda.en_lista_de_espera) == (1, 1)

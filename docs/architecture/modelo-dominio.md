@@ -170,12 +170,12 @@ El agregado `SolicitudDeMembresia` es la única puerta para cambiar el estado: t
 ```mermaid
 flowchart TB
   subgraph API["api/ (FastAPI)"]
-    R["routers: solicitudes, clases, socios, catalogo"]
+    R["routers: solicitudes, clases, socios, reportes, catalogo"]
     S["schemas (Pydantic): entrada y salida"]
     M["main.py: errores de dominio a HTTP"]
   end
   subgraph APP["application/"]
-    SV["ServicioDeMembresias, ServicioDeClases<br/>un método por caso de uso"]
+    SV["ServicioDeMembresias, ServicioDeClases,<br/>ServicioDeReportes (Table Module)"]
     P["puertos (Protocol):<br/>RepositorioSocios, RepositorioPlanes,<br/>RepositorioSolicitudes, RepositorioClases,<br/>RepositorioIngresos, Reloj, PublicadorDeEventos"]
   end
   subgraph DOM["domain/ (sin dependencias externas)"]

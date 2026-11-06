@@ -15,7 +15,7 @@
 
 ## Alcance implementado
 
-El BRD describe todo el negocio de FitZone (membresías, reservas, lista de espera, no-shows, cancelación de clases, excepciones y reportes). El código implementa dos módulos: la **contratación de membresías** (BN-09 y BN-10, RN-37 a RN-41, junto con RN-03, RN-08, RN-09 y RN-10), que es el que usa el paquete de datos del profesor, y **clases, reservas, lista de espera y sanciones** (BN-01 y BN-02, RN-05, RN-11, RN-13 a RN-28). Las demás reglas están analizadas y diseñadas (BRD, BPMN y Actividad 3) pero no programadas; la [matriz de trazabilidad](trazabilidad.md) dice cuál es cuál y [ADR-008](adr/ADR-008-alcance-del-codigo.md) justifica el corte.
+El BRD describe todo el negocio de FitZone (membresías, reservas, lista de espera, no-shows, cancelación de clases, excepciones y reportes). El código implementa tres módulos: la **contratación de membresías** (BN-09 y BN-10, RN-37 a RN-41, junto con RN-03, RN-08, RN-09 y RN-10), que es el que usa el paquete de datos del profesor, y **clases, reservas, lista de espera y sanciones** (BN-01 y BN-02, RN-05, RN-11, RN-13 a RN-28), y **reportes** de afluencia y demanda (BN-04 y BN-05, RN-35 y RN-36). Las demás reglas están analizadas y diseñadas (BRD, BPMN y Actividad 3) pero no programadas; la [matriz de trazabilidad](trazabilidad.md) dice cuál es cuál y [ADR-008](adr/ADR-008-alcance-del-codigo.md) justifica el corte.
 
 ## Cómo se relacionan los artefactos
 

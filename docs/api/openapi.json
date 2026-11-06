@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "FitZone - Componentes de Lógica de Negocio",
-    "description": "API del PIA (Equipo 11, FIME-UANL): membresías, clases, reservas, lista de espera y sanciones de FitZone.\n\nCódigos HTTP: **201** al crear · **200** lecturas y cambios · **400** formato inválido · **404** no existe · **409** conflicto de estado, cupo o membresía activa · **422** regla de negocio violada.",
-    "version": "0.3.0"
+    "description": "API del PIA (Equipo 11, FIME-UANL): membresías, clases, reservas, lista de espera, sanciones y reportes de FitZone.\n\nCódigos HTTP: **201** al crear · **200** lecturas y cambios · **400** formato inválido · **404** no existe · **409** conflicto de estado, cupo o membresía activa · **422** regla de negocio violada.",
+    "version": "0.4.0"
   },
   "paths": {
     "/health": {
@@ -1390,6 +1390,96 @@
         }
       }
     },
+    "/reportes/afluencia": {
+      "get": {
+        "tags": [
+          "Reportes"
+        ],
+        "summary": "Afluencia por hora y día",
+        "description": "Total de ingresos entre `desde` y `hasta`, ambos inclusive (RN-35).",
+        "operationId": "afluencia_reportes_afluencia_get",
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Desde"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Hasta"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AfluenciaOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Formato de la solicitud inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Fecha final anterior a la inicial (RN-35)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reportes/demanda": {
+      "get": {
+        "tags": [
+          "Reportes"
+        ],
+        "summary": "Demanda por clase",
+        "description": "Ocupación y lista de espera de cada clase, de mayor a menor (RN-36).",
+        "operationId": "demanda_reportes_demanda_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DemandaOut"
+                  },
+                  "type": "array",
+                  "title": "Response Demanda Reportes Demanda Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/planes": {
       "get": {
         "tags": [
@@ -1443,6 +1533,47 @@
   },
   "components": {
     "schemas": {
+      "AfluenciaOut": {
+        "properties": {
+          "desde": {
+            "type": "string",
+            "format": "date",
+            "title": "Desde"
+          },
+          "hasta": {
+            "type": "string",
+            "format": "date",
+            "title": "Hasta"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "por_hora": {
+            "items": {
+              "$ref": "#/components/schemas/IngresosPorHoraOut"
+            },
+            "type": "array",
+            "title": "Por Hora"
+          },
+          "por_dia": {
+            "items": {
+              "$ref": "#/components/schemas/IngresosPorDiaOut"
+            },
+            "type": "array",
+            "title": "Por Dia"
+          }
+        },
+        "type": "object",
+        "required": [
+          "desde",
+          "hasta",
+          "total",
+          "por_hora",
+          "por_dia"
+        ],
+        "title": "AfluenciaOut"
+      },
       "CategoriaClase": {
         "type": "string",
         "enum": [
@@ -1591,6 +1722,51 @@
           "aprobada"
         ],
         "title": "DecisionIn"
+      },
+      "DemandaOut": {
+        "properties": {
+          "clase_id": {
+            "type": "string",
+            "title": "Clase Id"
+          },
+          "nombre": {
+            "type": "string",
+            "title": "Nombre"
+          },
+          "inicio": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Inicio"
+          },
+          "capacidad": {
+            "type": "integer",
+            "title": "Capacidad"
+          },
+          "reservas_confirmadas": {
+            "type": "integer",
+            "title": "Reservas Confirmadas"
+          },
+          "ocupacion_pct": {
+            "type": "string",
+            "title": "Ocupacion Pct",
+            "description": "Porcentaje como texto decimal, por ejemplo \"100.00\"."
+          },
+          "en_lista_de_espera": {
+            "type": "integer",
+            "title": "En Lista De Espera"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clase_id",
+          "nombre",
+          "inicio",
+          "capacidad",
+          "reservas_confirmadas",
+          "ocupacion_pct",
+          "en_lista_de_espera"
+        ],
+        "title": "DemandaOut"
       },
       "EntradaEsperaOut": {
         "properties": {
@@ -1800,6 +1976,42 @@
           "momento"
         ],
         "title": "IngresoOut"
+      },
+      "IngresosPorDiaOut": {
+        "properties": {
+          "dia": {
+            "type": "string",
+            "title": "Dia"
+          },
+          "ingresos": {
+            "type": "integer",
+            "title": "Ingresos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dia",
+          "ingresos"
+        ],
+        "title": "IngresosPorDiaOut"
+      },
+      "IngresosPorHoraOut": {
+        "properties": {
+          "hora": {
+            "type": "integer",
+            "title": "Hora"
+          },
+          "ingresos": {
+            "type": "integer",
+            "title": "Ingresos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hora",
+          "ingresos"
+        ],
+        "title": "IngresosPorHoraOut"
       },
       "LineaIn": {
         "properties": {
@@ -2201,13 +2413,6 @@
           "type": {
             "type": "string",
             "title": "Error Type"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "ctx": {
-            "type": "object",
-            "title": "Context"
           }
         },
         "type": "object",
