@@ -125,7 +125,7 @@ Copia `.env.example` a `.env` y ajusta los valores (sin secretos en el repo):
 ```bash
 cp .env.example .env        # ajusta la contraseña (también dentro de DATABASE_URL)
 docker compose up --build   # DB + App en http://localhost:8000/docs
-docker compose --profile tests run --rm tests   # pruebas con cobertura
+docker compose --profile tests run --build --rm tests   # pruebas con cobertura
 ```
 
 La primera petición a la API crea las tablas y carga los datos del paquete

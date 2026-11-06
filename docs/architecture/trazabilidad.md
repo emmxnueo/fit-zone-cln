@@ -17,7 +17,7 @@ Recorre el camino **necesidad (BN) → historia (US) y Gherkin → regla (RN) �
 | `D/clase` | `tests/unit/domain/test_clase.py` |
 | `D/faltas` | `tests/unit/domain/test_socio_faltas.py` |
 | `A/clases` | `tests/unit/application/test_clases.py` |
-| `I/clases` | `tests/unit/infrastructure/test_clases_sql.py` |
+| `I/clases` | `tests/unit/infrastructure/test_clases_sql.py` (SQLite y PostgreSQL) |
 | `API/clases` | `tests/integration/test_api_clases.py` |
 | `API` | `tests/integration/test_api.py` |
 | `PKG` | `tests/integration/test_paquete_csv.py` (120 casos y 20 transiciones contra un oráculo independiente) |

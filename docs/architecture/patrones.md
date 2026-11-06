@@ -16,16 +16,16 @@ Se comparó Transaction Script, Table Module y Domain Model con los criterios de
 
 | Patrón | Dónde | Qué problema resuelve | Descartado |
 |---|---|---|---|
-| **Aggregate Root** | `SolicitudDeMembresia` en `domain/solicitud.py` | Una sola puerta para cambiar estado y proteger invariantes (total, estado, eventos) | Servicio que modifica campos sueltos de la solicitud |
-| **Value Object** | `Dinero`, `Cantidad`, `LineaSolicitud` en `domain/value_objects.py` | Dinero siempre `Decimal` con 2 decimales, nunca `float`; cantidad entera de 1 o más (RN-38). Son inmutables | Usar `float` e `int` sueltos y validar en cada flujo |
-| **Specification** | `domain/specifications.py` | Reglas de negocio como objetos que se combinan con AND (`&`), OR (`\|`) y NOT (`~`): RN-37 = `SocioActivo & SolicitudConLineas & SolicitudValidada`; RN-40 = `SocioPremium & TotalMinimo & ~CortesiaActiva` ([ADR-004](adr/ADR-004-specification.md)) | `if` anidados repetidos en cada caso de uso |
-| **State Machine** | `domain/state_machine.py` | RN-41 en una tabla de transiciones; lo que no está en la tabla se rechaza con 409 ([ADR-005](adr/ADR-005-state-machine-por-tabla.md)) | Comparaciones de estado dispersas en los métodos |
+| **Aggregate Root** | `SolicitudDeMembresia` en `domain/solicitud.py`, `Clase` en `domain/clase.py`, `Socio` en `domain/entities.py` | Una sola puerta para cambiar estado y proteger invariantes (total, capacidad, orden de la lista, faltas, eventos) | Servicio que modifica campos sueltos de la solicitud |
+| **Value Object** | `Dinero`, `Cantidad`, `LineaSolicitud`, `Falta` en `domain/value_objects.py` | Dinero siempre `Decimal` con 2 decimales, nunca `float`; cantidad entera de 1 o más (RN-38). Son inmutables | Usar `float` e `int` sueltos y validar en cada flujo |
+| **Specification** | `domain/specifications.py` | Reglas de negocio como objetos que se combinan con AND (`&`), OR (`\|`) y NOT (`~`): RN-37 = `SocioActivo & SolicitudConLineas & SolicitudValidada`; RN-40 = `SocioPremium & TotalMinimo & ~CortesiaActiva`; RN-13 = `SocioActivo & MembresiaVigente & PlanIncluyeCategoria & SinSancionActiva` ([ADR-004](adr/ADR-004-specification.md)) | `if` anidados repetidos en cada caso de uso |
+| **State Machine** | `domain/state_machine.py` | RN-41 y el ciclo de la reserva en tablas de transiciones; lo que no está en la tabla se rechaza con 409 ([ADR-005](adr/ADR-005-state-machine-por-tabla.md)) | Comparaciones de estado dispersas en los métodos |
 | **Domain Events** | `domain/events.py`, `pull_events()` | El agregado registra lo que pasó; los suscriptores reaccionan sin que el dominio los conozca (RN-34) | Que el dominio llame directo al envío de avisos |
 | **Repository** | Puertos en `application/puertos.py`; adaptadores en `infrastructure/` | El dominio y los casos de uso no saben si hay PostgreSQL o memoria | Consultas SQL dentro de los casos de uso |
 | **Ports and Adapters (hexagonal)** | `Protocol` + `composicion.py` | Cambiar la base de datos sin tocar el negocio; probar sin base ([ADR-006](adr/ADR-006-puertos-y-adaptadores.md)) | Dependencia directa de SQLAlchemy desde la aplicación |
-| **Service Layer** | `ServicioDeMembresias` | Un método por caso de uso: carga, ejecuta el comando de dominio, guarda y publica. No contiene reglas | Reglas dentro de los routers |
+| **Service Layer** | `ServicioDeMembresias`, `ServicioDeClases` | Un método por caso de uso: carga, ejecuta el comando de dominio, guarda y publica. No contiene reglas | Reglas dentro de los routers |
 | **DTO** | `api/schemas.py` (Pydantic) | Contratos de entrada y salida de la API, separados de las entidades | Exponer las entidades directamente |
-| **Publisher / Observer** | `PublicadorEnMemoria.suscribir()` | Suscribir manejadores por tipo de evento | Acoplar cada caso de uso a sus efectos |
+| **Publisher / Observer** | `PublicadorEnMemoria.suscribir()`; `ServicioDeClases` se suscribe a `NoShowRegistrado` y `CancelacionTardiaRegistrada` | Suscribir manejadores por tipo de evento; así la falta llega al Socio sin que la Clase lo conozca (ADR-003) | Acoplar cada caso de uso a sus efectos |
 | **Dependency Injection** | `api/dependencias.py` con `Depends` | Reemplazar el servicio en pruebas (`dependency_overrides`) | Singletons globales fijos |
 
 Traducción de errores: los errores de dominio llevan su código HTTP y un manejador único los convierte en respuesta ([ADR-007](adr/ADR-007-errores-de-dominio-a-http.md)).
@@ -34,7 +34,7 @@ Traducción de errores: los errores de dominio llevan su código HTTP y un manej
 
 | Patrón | Estado |
 |---|---|
-| Unit of Work explícito | No se implementó: cada `guardar` abre y cierra su propia sesión. Es suficiente porque cada caso de uso modifica un solo agregado |
+| Unit of Work explícito | No se implementó: cada `guardar` abre y cierra su propia sesión. Cada comando modifica un agregado; la falta llega al Socio después por evento, con consistencia eventual (ADR-003). Si ese segundo paso falla, la clase ya quedó guardada |
 | CQRS básico (Commands, Queries, DTO de lectura) | Aplicado de forma ligera: las consultas (`obtener`, `listar`, `evaluar_*`) no cambian estado; no hay modelos de lectura separados |
-| Domain Services (ElegibilidadDeReserva, CalculoDeCambioDePlan) | Diseñados para reservas y cambios de plan, que están fuera del alcance del código |
+| Domain Services (ElegibilidadDeReserva, CalculoDeCambioDePlan) | `ElegibilidadDeReserva` se resolvió con la Specification `ElegibleParaReservar`; `CalculoDeCambioDePlan` sigue diseñado, fuera del alcance del código |
 | Table Module para reportes | Diseñado; fuera del alcance del código |

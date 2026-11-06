@@ -31,14 +31,14 @@ La configuración sale del entorno, sin secretos en el código. `.env` está en 
 |---|---|---|
 | Local sin Docker | `uvicorn src.api.main:app --reload` | Memoria (sin `DATABASE_URL`) |
 | Docker Compose | `docker compose up --build` | PostgreSQL 16 en el servicio `db` con volumen `pgdata` |
-| Pruebas en Compose | `docker compose --profile tests run --rm tests` | PostgreSQL del servicio `db` |
-| Pruebas unitarias | `pytest` | SQLite en memoria para los repositorios SQL |
+| Pruebas en Compose | `docker compose --profile tests run --build --rm tests` | PostgreSQL del servicio `db`; sin `--build` puede usarse una imagen con código viejo |
+| Pruebas unitarias | `pytest` | SQLite en memoria para los repositorios SQL; el flujo de reservas también corre en PostgreSQL, en un esquema temporal, si `DATABASE_URL` apunta a uno |
 | CI | GitHub Actions | PostgreSQL 16 como servicio del job |
 | Producción | Render | PostgreSQL de Render |
 
 ## Datos iniciales
 
-La primera petición crea las tablas y carga el paquete del profesor desde `data/*.csv`: 40 socios, 20 planes y 60 solicitudes (`sembrar_si_vacia`). Solo siembra si la base está vacía.
+La primera petición crea las tablas y carga el paquete del profesor desde `data/*.csv`: 40 socios, 20 planes y 60 solicitudes (`sembrar_si_vacia`). Solo siembra si la base está vacía. Aparte, `sembrar_clases_si_vacio` crea 3 clases de demostración para el día siguiente, que no vienen del paquete. Las faltas y sanciones usan tablas propias porque `create_all` no agrega columnas a una tabla existente y no hay migraciones.
 
 ## Verificación del paquete
 
@@ -48,4 +48,7 @@ La primera petición crea las tablas y carga el paquete del profesor desde `data
 
 - Los Domain Events se publican en memoria (`PublicadorEnMemoria`): `GET /eventos` se vacía si el servicio se reinicia.
 - El vencimiento (`/vencer`) lo dispara una llamada explícita; no hay un reloj que lo ejecute solo al llegar la fecha (RN-04).
+- Las ofertas vencidas y los no-shows se procesan al llamar `POST /clases/procesar-reloj`; hace falta una tarea programada externa. Ese endpoint acepta `ahora` para la demostración, y no hay autenticación que lo restrinja.
+- Dos reservas simultáneas podrían superar la capacidad: no hay bloqueo en la base de datos. El cupo de los planes tiene el mismo riesgo.
+- La hora del negocio es la de Monterrey, sin zona (`RelojDelSistema`); la API rechaza fechas con zona (400).
 - El servicio de Render gratuito se duerme con inactividad; la primera petición puede tardar hasta un minuto.

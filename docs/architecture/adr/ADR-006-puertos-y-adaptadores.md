@@ -11,7 +11,7 @@ El PIA exige persistencia en PostgreSQL y pruebas unitarias rápidas. Los casos 
 - **Un puerto por agregado o rol, con adaptadores intercambiables.**
 
 ## Decisión
-`application/puertos.py` define `Protocol` pequeños: `RepositorioSocios`, `RepositorioPlanes`, `RepositorioSolicitudes` y `PublicadorDeEventos`. `infrastructure/` los implementa con SQLAlchemy (`repositorios_sql.py`) y en memoria (`memoria.py`). `composicion.crear_servicio()` elige: con `DATABASE_URL` usa PostgreSQL; sin ella, memoria. Los repositorios SQL se prueban sobre SQLite en memoria.
+`application/puertos.py` define `Protocol` pequeños: `RepositorioSocios`, `RepositorioPlanes`, `RepositorioSolicitudes`, `RepositorioClases`, `RepositorioIngresos`, `Reloj` y `PublicadorDeEventos`. `infrastructure/` los implementa con SQLAlchemy (`repositorios_sql.py`) y en memoria (`memoria.py`). `composicion.crear_servicios()` elige: con `DATABASE_URL` usa PostgreSQL; sin ella, memoria. Los repositorios SQL se prueban sobre SQLite en memoria, y el flujo de reservas también sobre PostgreSQL cuando hay uno disponible.
 
 ## Consecuencias
 - Beneficio: el dominio y los casos de uso se prueban sin base; cambiar de motor no toca el negocio.

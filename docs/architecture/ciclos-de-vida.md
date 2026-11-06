@@ -69,7 +69,7 @@ Decisiones que el BRD no fija y que el código resuelve así:
 - **Clase iniciada:** ya no se reserva ni se cancela (409). Tampoco se hacen ofertas nuevas: desde ese momento los lugares solo se asignan por RN-21.
 - **Lugar ofrecido:** sigue apartado hasta que la oferta se resuelva, y quien reserva con socios esperando entra a la lista, aunque quede un lugar libre (RN-19).
 - **Confirmar una oferta** vuelve a exigir RN-13: si el socio perdió la elegibilidad se rechaza (422) y la oferta sigue hasta expirar.
-- **Reserva repetida** del mismo socio en la misma clase: 409.
+- **Orden de validación** (BPMN 12.2): clase iniciada (409), elegibilidad (422), reserva o lista repetida (409, RN-24).
 - **Fecha de la falta:** es la hora de inicio de la clase, para que el mes calendario (RN-26) no dependa de cuándo corra el reloj.
 - **Sanción activa:** las faltas nuevas se acumulan sin extenderla (RN-28) y cuentan para la siguiente sanción si son del mismo mes.
 

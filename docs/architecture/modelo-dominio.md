@@ -154,22 +154,32 @@ El agregado `SolicitudDeMembresia` es la única puerta para cambiar el estado: t
 | `MembresiaRenovada` | `renovar()` | RN-08 |
 | `MembresiaDadaDeBaja` | `dar_de_baja()` | RN-10 |
 | `SolicitudCancelada` | `cancelar()` | RN-41 |
+| `ReservaConfirmada` | `Clase.reservar()`, `confirmar_oferta()`, asignación por retraso | RN-11, RN-20, RN-21 |
+| `SocioEnListaDeEspera` | `Clase.reservar()` | RN-13, RN-19 |
+| `ReservaCancelada` | `Clase.cancelar_reserva()` | RN-15, RN-16 |
+| `CancelacionTardiaRegistrada` | `Clase.cancelar_reserva()` con menos de 1 h; dispara la falta (no aparece en el BPMN) | RN-16, RN-25 |
+| `NoShowRegistrado` | `Clase.aplicar_tolerancia()` | RN-17, RN-25 |
+| `LugarLiberado` | `Clase.cancelar_reserva()`, `aplicar_tolerancia()` | RN-15 a RN-17 |
+| `LugarOfrecidoASocio` | oferta al primero de la lista | RN-20, RN-22 |
+| `OfertaDeLugarExpirada` | `Clase.expirar_oferta()` | RN-20 |
+| `FaltaRegistrada` | `Socio.registrar_falta()` | RN-25 |
+| `SancionAplicada` | `Socio.registrar_falta()` | RN-26 a RN-28 |
 
 ## 3. Arquitectura por capas
 
 ```mermaid
 flowchart TB
   subgraph API["api/ (FastAPI)"]
-    R["routers: solicitudes, catalogo"]
+    R["routers: solicitudes, clases, socios, catalogo"]
     S["schemas (Pydantic): entrada y salida"]
     M["main.py: errores de dominio a HTTP"]
   end
   subgraph APP["application/"]
-    SV["ServicioDeMembresias<br/>un método por caso de uso"]
-    P["puertos (Protocol):<br/>RepositorioSocios, RepositorioPlanes,<br/>RepositorioSolicitudes, PublicadorDeEventos"]
+    SV["ServicioDeMembresias, ServicioDeClases<br/>un método por caso de uso"]
+    P["puertos (Protocol):<br/>RepositorioSocios, RepositorioPlanes,<br/>RepositorioSolicitudes, RepositorioClases,<br/>RepositorioIngresos, Reloj, PublicadorDeEventos"]
   end
   subgraph DOM["domain/ (sin dependencias externas)"]
-    AG["SolicitudDeMembresia"]
+    AG["SolicitudDeMembresia, Clase, Socio"]
     SP["Specifications"]
     SM["state_machine"]
     EV["events, errors, value_objects, entities"]
@@ -178,6 +188,7 @@ flowchart TB
     SQL["repositorios_sql (SQLAlchemy, PostgreSQL)"]
     MEM["memoria (repositorios y publicador)"]
     CMP["composicion: arma las dependencias"]
+    RLJ["reloj: hora local del negocio"]
     CSV["csv_loader: datos del paquete"]
   end
   R --> SV
@@ -190,6 +201,7 @@ flowchart TB
   AG --> EV
   SQL -. "implementa" .-> P
   MEM -. "implementa" .-> P
+  RLJ -. "implementa" .-> P
   CMP --> SQL
   CMP --> MEM
   CSV --> CMP
@@ -204,10 +216,24 @@ erDiagram
   SOCIOS ||--o{ SOLICITUDES : "solicita"
   SOLICITUDES ||--|{ LINEAS_SOLICITUD : "contiene"
   PLANES ||--o{ LINEAS_SOLICITUD : "se contrata en"
+  CLASES ||--o{ RESERVAS : "tiene"
+  CLASES ||--o{ LISTA_ESPERA : "tiene"
+  SOCIOS ||--o{ RESERVAS : "hace"
+  SOCIOS ||--o{ LISTA_ESPERA : "espera en"
+  SOCIOS ||--o{ INGRESOS : "registra"
+  SOCIOS ||--o{ FALTAS : "acumula"
+  SOCIOS ||--o| SANCIONES : "recibe"
+  CLASES ||--o{ FALTAS : "origina"
   SOCIOS { string id PK  string nombre  bool es_premium  bool activo  string ciudad }
   PLANES { string id PK  string descripcion  numeric precio  int cupo  bool habilitado  int duracion_meses }
   SOLICITUDES { string id PK  string socio_id FK  date fecha_solicitud  bool validada  bool cortesia_activa  string referencia  string estado }
   LINEAS_SOLICITUD { int id PK  string solicitud_id FK  string plan_id FK  numeric precio_unitario  int cantidad }
+  CLASES { string id PK  string nombre  string categoria  datetime inicio  int capacidad  string instructor  string salon }
+  RESERVAS { string id PK  string clase_id FK  string socio_id FK  datetime creada_en  string estado }
+  LISTA_ESPERA { string id PK  string clase_id FK  string socio_id FK  int orden  datetime registrada_en  string estado  datetime ofertada_en }
+  INGRESOS { int id PK  string socio_id FK  datetime momento }
+  FALTAS { int id PK  string socio_id FK  string clase_id FK  datetime momento  string motivo  bool consumida }
+  SANCIONES { string socio_id PK  datetime hasta }
 ```
 
 El `precio_unitario` se guarda en la línea: el total de una solicitud no cambia si el plan cambia de precio después (RN-38).
