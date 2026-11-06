@@ -3,12 +3,12 @@
 from functools import lru_cache
 
 from src.application.servicio import ServicioDeMembresias
-from src.infrastructure.composicion import crear_servicio_en_memoria
+from src.infrastructure.composicion import crear_servicio
 
 
 @lru_cache
 def _servicio_global() -> ServicioDeMembresias:
-    return crear_servicio_en_memoria()
+    return crear_servicio()  # PostgreSQL si hay DATABASE_URL; memoria si no
 
 
 def get_servicio() -> ServicioDeMembresias:
