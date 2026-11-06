@@ -1,11 +1,15 @@
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from src.domain.errors import ErrorDeDominio
 
 from .routers import catalogo, clases, reportes, socios, solicitudes
+
+_INTERFAZ = Path(__file__).parent / "web" / "index.html"
 
 app = FastAPI(
     title="FitZone - Componentes de Lógica de Negocio",
@@ -16,7 +20,7 @@ app = FastAPI(
         "inválido · **404** no existe · **409** conflicto de estado, cupo o membresía "
         "activa · **422** regla de negocio violada."
     ),
-    version="0.5.0",
+    version="0.6.0",
 )
 
 
@@ -41,6 +45,12 @@ async def manejar_formato_invalido(request: Request, exc: RequestValidationError
             "errores": jsonable_encoder(exc.errors()),
         },
     )
+
+
+@app.get("/", include_in_schema=False)
+def interfaz() -> FileResponse:
+    """Interfaz de demostración. El rol solo cambia lo que se ve: no es autenticación."""
+    return FileResponse(_INTERFAZ)
 
 
 @app.get("/health", tags=["sistema"])

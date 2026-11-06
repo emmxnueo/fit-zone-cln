@@ -123,3 +123,14 @@ def test_ciclo_de_cancelacion_persiste(entorno):
     leida = s.clases.obtener(c.id)
     assert leida.estado == EstadoClase.CANCELADA and leida.confirmadas == []
     assert leida.lista_espera[0].estado == EstadoEntrada.DESCARTADA
+
+
+def test_listar_socios_incluye_faltas_y_sancion(entorno):
+    s, (t, _, _), reloj = entorno
+    for dia in range(3):
+        c = s.clases.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO + timedelta(days=dia), 1)
+        reloj.fijar(c.inicio - timedelta(hours=2))
+        s.clases.reservar(c.id, t)
+        s.clases.procesar_reloj(c.inicio + timedelta(minutes=11))
+    socio = next(x for x in s.clases.listar_socios() if x.id == t)
+    assert len(socio.faltas) == 3 and socio.sancion_hasta is not None

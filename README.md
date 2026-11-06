@@ -82,6 +82,13 @@ src/
 La documentación de análisis y arquitectura está en `docs/`
 (BRD, ADRs, diagramas y OpenAPI).
 
+## Interfaz de demostración
+
+La raíz del sistema (`/`) abre una interfaz básica: eliges rol (Socio, Recepción,
+Instructor o Administrador) y cada uno ve solo sus acciones. Usa la misma API y
+vive en `src/api/web/index.html`, sin dependencias nuevas. El rol solo cambia lo
+que se ve: no es autenticación, y la API sigue abierta. Swagger sigue en `/docs`.
+
 ## API
 
 | Método | Ruta | Descripción |
@@ -106,7 +113,7 @@ La documentación de análisis y arquitectura está en `docs/`
 | POST | `/clases/{id}/cancelacion` | El instructor solicita cancelar su clase, con 2 h o más de aviso |
 | POST | `/clases/{id}/cancelacion/resolver` | El Administrador aprueba o rechaza |
 | POST | `/clases/procesar-reloj` | Expira ofertas y aplica la tolerancia; acepta `ahora` para la demostración |
-| GET | `/socios/{id}` | Faltas y sanción |
+| GET | `/socios`, `/socios/{id}` | Listado, faltas y sanción |
 | POST | `/socios/{id}/ingresos` | Registrar ingreso (RN-05) |
 | GET | `/reportes/afluencia?desde=&hasta=` | Ingresos por hora y día de la semana (RN-35) |
 | GET | `/reportes/demanda` | Ocupación y lista de espera por clase (RN-36) |

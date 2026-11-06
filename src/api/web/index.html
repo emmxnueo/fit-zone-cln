@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FitZone</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quattrocento+Sans:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --fondo: #F7F5F0;
+    --superficie: #FFFFFF;
+    --texto: #1F2421;
+    --tenue: #5F6661;
+    --linea: #DAD6CC;
+    --acento: #2F4F46;
+    --acento-suave: #E6ECE8;
+    --error: #8A2F2A;
+    --error-suave: #F6E7E5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--fondo);
+    color: var(--texto);
+    font-family: "Quattrocento Sans", Georgia, sans-serif;
+    font-size: 17px;
+    line-height: 1.5;
+  }
+  h1, h2, h3 { font-weight: 400; margin: 0; }
+  h2 { font-size: 30px; }
+  h3 { font-size: 20px; margin: 32px 0 12px; }
+  button, input, select { font: inherit; color: inherit; }
+  button {
+    background: var(--acento);
+    color: #fff;
+    border: 1px solid var(--acento);
+    padding: 7px 16px;
+    cursor: pointer;
+  }
+  button:hover { background: #233D36; }
+  button.secundario { background: transparent; color: var(--acento); }
+  button.secundario:hover { background: var(--acento-suave); }
+  button:disabled { opacity: .5; cursor: default; }
+  :focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+  label { display: block; font-size: 15px; color: var(--tenue); }
+  label.casilla { display: flex; align-items: center; gap: 8px; }
+  input:not([type=checkbox]), select {
+    display: block;
+    width: 100%;
+    margin-top: 4px;
+    padding: 7px 10px;
+    background: var(--superficie);
+    border: 1px solid var(--linea);
+  }
+
+  /* Elección de rol */
+  .entrada { max-width: 720px; margin: 0 auto; padding: 12vh 24px 48px; }
+  .marca { letter-spacing: .28em; font-size: 15px; color: var(--acento); }
+  .entrada h1 { font-size: 40px; margin: 12px 0 8px; }
+  .entrada p { color: var(--tenue); margin: 0 0 36px; }
+  .roles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .rol {
+    background: var(--superficie);
+    color: var(--texto);
+    border: 1px solid var(--linea);
+    padding: 22px;
+    text-align: left;
+  }
+  .rol:hover, .rol.activo { background: var(--superficie); border-color: var(--acento); }
+  .rol strong { display: block; font-size: 21px; font-weight: 400; }
+  .rol span { color: var(--tenue); font-size: 15px; }
+  .identidad { margin-top: 24px; display: flex; gap: 12px; align-items: flex-end; }
+  .identidad label { flex: 1; }
+
+  /* Panel */
+  .panel { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+  nav {
+    background: var(--acento);
+    color: #fff;
+    padding: 28px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  nav .marca { color: #fff; padding: 0 12px; }
+  nav .quien { padding: 8px 12px 24px; font-size: 15px; color: #C9D5CF; }
+  nav button { background: transparent; border-color: transparent; text-align: left; padding: 9px 12px; }
+  nav button:hover, nav button[aria-current=page] { background: #3D6358; }
+  nav .salir { margin-top: auto; color: #C9D5CF; }
+  nav :focus-visible { outline-color: #fff; }
+  main { padding: 40px 48px; min-width: 0; }
+  .aviso { margin: 16px 0 0; padding: 10px 14px; border-left: 3px solid var(--acento); background: var(--acento-suave); }
+  .aviso.error { border-color: var(--error); background: var(--error-suave); color: var(--error); }
+  .aviso:empty { display: none; }
+  .nota { color: var(--tenue); margin: 6px 0 0; }
+  .vacio { color: var(--tenue); padding: 20px 0; }
+
+  .marco { overflow-x: auto; margin-top: 16px; }
+  table { width: 100%; border-collapse: collapse; background: var(--superficie); border: 1px solid var(--linea); }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--linea); vertical-align: middle; }
+  th { font-size: 14px; font-weight: 400; color: var(--tenue); white-space: nowrap; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.acciones { white-space: nowrap; text-align: right; }
+  td.acciones button { margin-left: 6px; padding: 4px 12px; font-size: 15px; }
+  tr:last-child td { border-bottom: 0; }
+
+  form.tarjeta {
+    margin-top: 16px;
+    padding: 20px;
+    background: var(--superficie);
+    border: 1px solid var(--linea);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 16px;
+    align-items: end;
+  }
+  .filtro { max-width: 260px; margin-top: 16px; }
+
+  @media (max-width: 760px) {
+    .roles { grid-template-columns: 1fr; }
+    .identidad { flex-direction: column; align-items: stretch; }
+    .panel { grid-template-columns: 1fr; }
+    nav { padding: 16px; }
+    nav .quien { padding-bottom: 8px; }
+    nav .salir { margin-top: 8px; }
+    main { padding: 24px 16px; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+"use strict";
+
+// --- utilidades -------------------------------------------------------------
+function el(etiqueta, atributos = {}, ...hijos) {
+  const nodo = document.createElement(etiqueta);
+  for (const [clave, valor] of Object.entries(atributos)) {
+    if (clave.startsWith("on")) nodo.addEventListener(clave.slice(2), valor);
+    else if (clave === "class") nodo.className = valor;
+    else if (typeof valor === "boolean") nodo[clave] = valor;
+    else if (valor !== undefined && valor !== null) nodo.setAttribute(clave, valor);
+  }
+  nodo.append(...hijos.flat(Infinity).filter((h) => h !== null && h !== undefined));
+  return nodo;
+}
+
+async function api(metodo, ruta, cuerpo) {
+  const opciones = { method: metodo };
+  if (cuerpo !== undefined) {
+    opciones.headers = { "Content-Type": "application/json" };
+    opciones.body = JSON.stringify(cuerpo);
+  }
+  const respuesta = await fetch(ruta, opciones);
+  const datos = await respuesta.json().catch(() => null);
+  if (!respuesta.ok) {
+    const regla = datos && datos.regla ? ` (${datos.regla})` : "";
+    throw new Error(`${(datos && datos.detail) || "No se pudo completar la acción"}${regla}`);
+  }
+  return datos;
+}
+
+const formatoFecha = new Intl.DateTimeFormat("es-MX", {
+  day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+});
+const fecha = (iso) => (iso ? formatoFecha.format(new Date(iso)) : "");
+const ETIQUETAS = {
+  CANCELACION_SOLICITADA: "Cancelación solicitada",
+  CANCELACION_TARDIA: "Cancelación tardía",
+  ESTANDAR: "Estándar",
+  NO_SHOW: "No-show",
+};
+const texto = (valor) => ETIQUETAS[valor] || String(valor).replaceAll("_", " ").toLowerCase()
+  .replace(/^./, (letra) => letra.toUpperCase());
+const hoy = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+function tabla(encabezados, filas, vacio) {
+  if (!filas.length) return el("p", { class: "vacio" }, vacio);
+  const celda = (valor, i) => {
+    const clase = encabezados[i] === "" ? "acciones" : encabezados[i].endsWith("#") ? "num" : undefined;
+    return el("td", { class: clase }, valor);
+  };
+  return el("div", { class: "marco" }, el("table", {},
+    el("thead", {}, el("tr", {}, encabezados.map((e) => el("th", {
+      scope: "col", class: e.endsWith("#") ? "num" : undefined,
+    }, e.replace("#", ""))))),
+    el("tbody", {}, filas.map((fila) => el("tr", {}, fila.map(celda))))));
+}
+
+const boton = (etiqueta, accion, exito, clase) => el("button", {
+  type: "button", class: clase, onclick: () => ejecutar(accion, exito),
+}, etiqueta);
+
+function selector(nombre, etiqueta, opciones, valor) {
+  return el("label", {}, etiqueta, el("select", { name: nombre },
+    opciones.map(([v, t]) => el("option", { value: v, selected: v === valor }, t))));
+}
+
+// --- estado y navegación ----------------------------------------------------
+const estado = { rol: null, persona: null, nombre: "", seccion: 0, filtro: {}, aviso: null, resultado: null };
+
+async function ejecutar(accion, exito) {
+  try {
+    const resultado = await accion();
+    estado.aviso = { texto: typeof exito === "function" ? exito(resultado) : exito, error: false };
+  } catch (error) {
+    estado.aviso = { texto: error.message, error: true };
+  }
+  await pintar();
+}
+
+function enviar(accion, exito) {
+  return (evento) => {
+    evento.preventDefault();
+    const datos = Object.fromEntries(new FormData(evento.target));
+    ejecutar(() => accion(datos), exito);
+  };
+}
+
+function salir() {
+  Object.assign(estado, { rol: null, persona: null, nombre: "", seccion: 0, aviso: null, resultado: null });
+  pintar();
+}
+
+// --- socio ------------------------------------------------------------------
+async function socioClases() {
+  const clases = await api("GET", `/clases?socio_id=${encodeURIComponent(estado.persona)}`);
+  const accion = (c) => {
+    if (c.estado === "CANCELADA") return "Cancelada";
+    if (c.reservas.some((r) => r.socio_id === estado.persona && r.estado === "CONFIRMADA")) return "Reservada";
+    if (c.lista_espera.some((e) => e.socio_id === estado.persona && ["EN_ESPERA", "OFERTADA"].includes(e.estado))) {
+      return "En lista de espera";
+    }
+    return boton("Reservar", () => api("POST", `/clases/${c.id}/reservas`, { socio_id: estado.persona }),
+      (r) => (r.resultado === "RESERVA_CONFIRMADA"
+        ? `Reserva confirmada en ${c.nombre}.`
+        : `${c.nombre} está llena: quedaste en la lista de espera.`));
+  };
+  return [
+    el("h2", {}, "Clases"),
+    tabla(["Clase", "Inicio", "Instructor", "Plan", "Lugares#", ""],
+      clases.map((c) => [c.nombre, fecha(c.inicio), c.instructor, c.etiqueta, c.lugares_libres, accion(c)]),
+      "No hay clases programadas."),
+  ];
+}
+
+async function socioReservas() {
+  const clases = await api("GET", "/clases");
+  const reservas = [];
+  const espera = [];
+  for (const c of clases) {
+    for (const r of c.reservas) {
+      if (r.socio_id === estado.persona && r.estado === "CONFIRMADA") {
+        reservas.push([c.nombre, fecha(c.inicio), boton("Cancelar",
+          () => api("POST", `/clases/${c.id}/reservas/${r.id}/cancelar`),
+          "Reserva cancelada. Con menos de 1 h de anticipación cuenta como falta.", "secundario")]);
+      }
+    }
+    const activas = c.lista_espera.filter((e) => ["EN_ESPERA", "OFERTADA"].includes(e.estado));
+    activas.forEach((e, i) => {
+      if (e.socio_id !== estado.persona) return;
+      const ofertada = e.estado === "OFERTADA";
+      espera.push([c.nombre, fecha(c.inicio),
+        ofertada ? "Lugar ofrecido: tienes 15 minutos" : `Posición ${i + 1}`,
+        ofertada ? boton("Confirmar lugar", () => api("POST", `/clases/${c.id}/oferta/confirmar`,
+          { socio_id: estado.persona }), "Lugar confirmado.") : ""]);
+    });
+  }
+  return [
+    el("h2", {}, "Mis reservas"),
+    tabla(["Clase", "Inicio", ""], reservas, "No tienes reservas confirmadas."),
+    el("h3", {}, "Lista de espera"),
+    tabla(["Clase", "Inicio", "Estado", ""], espera, "No estás en ninguna lista de espera."),
+  ];
+}
+
+async function socioHistorial() {
+  const [socio, solicitudes] = await Promise.all([
+    api("GET", `/socios/${encodeURIComponent(estado.persona)}`), api("GET", "/solicitudes"),
+  ]);
+  const propias = solicitudes.filter((s) => s.socio_id === estado.persona);
+  const vigente = propias.find((s) => s.estado === "ACTIVA") || propias.find((s) => s.estado === "SUSPENDIDA");
+  const sancionada = socio.sancion_hasta && new Date(socio.sancion_hasta) > new Date();
+  return [
+    el("h2", {}, "Mi historial"),
+    el("p", { class: "nota" }, `Membresía: ${vigente ? texto(vigente.estado) : "sin membresía activa"}`),
+    el("p", { class: "nota" }, sancionada
+      ? `Sanción activa hasta ${fecha(socio.sancion_hasta)}. Puedes entrar al gimnasio, pero no reservar.`
+      : "Sin sanción activa."),
+    el("h3", {}, "Faltas"),
+    tabla(["Fecha", "Motivo", "Estado"],
+      socio.faltas.map((f) => [fecha(f.momento), texto(f.motivo), f.consumida ? "Ya sancionada" : "Vigente"]),
+      "No tienes faltas registradas."),
+  ];
+}
+
+// --- recepción y membresías -------------------------------------------------
+const ACCIONES_RECEPCION = {
+  activar: ["Activar", (s) => api("POST", `/solicitudes/${s.id}/activar`), "Membresía activada."],
+  cancelar: ["Cancelar", (s) => api("POST", `/solicitudes/${s.id}/cancelar`), "Solicitud cancelada."],
+  renovar: ["Renovar con pago", (s) => api("POST", `/solicitudes/${s.id}/renovar`, { pago_confirmado: true }), "Membresía renovada."],
+};
+const ACCIONES_ADMIN = {
+  congelar: ["Congelar", (s) => api("POST", `/solicitudes/${s.id}/congelar`, { aprobada: true }), "Membresía congelada."],
+  descongelar: ["Descongelar", (s) => api("POST", `/solicitudes/${s.id}/descongelar`), "Membresía descongelada."],
+  vencer: ["Vencer", (s) => api("POST", `/solicitudes/${s.id}/vencer`), "Membresía vencida."],
+  dar_de_baja: ["Dar de baja", (s) => api("POST", `/solicitudes/${s.id}/dar-de-baja`, { aprobada: true }), "Baja aplicada."],
+};
+
+async function tablaSolicitudes(titulo, acciones, porDefecto) {
+  const clave = titulo;
+  const filtro = estado.filtro[clave] ?? porDefecto;
+  const consulta = filtro ? `?estado=${filtro}` : "";
+  const [solicitudes, socios] = await Promise.all([api("GET", `/solicitudes${consulta}`), api("GET", "/socios")]);
+  const nombres = Object.fromEntries(socios.map((s) => [s.id, s.nombre]));
+  const opciones = ["SOLICITADA", "ACTIVA", "SUSPENDIDA", "VENCIDA", "CANCELADA"].map((e) => [e, texto(e)]);
+  const campo = selector("estado", "Estado", [["", "Todos"], ...opciones], filtro);
+  campo.querySelector("select").addEventListener("change", (e) => {
+    estado.filtro[clave] = e.target.value;
+    estado.aviso = null;
+    pintar();
+  });
+  return [
+    el("h2", {}, titulo),
+    el("div", { class: "filtro" }, campo),
+    tabla(["Socio", "Fecha", "Total MXN#", "Estado", ""],
+      solicitudes.map((s) => [
+        nombres[s.socio_id] || s.socio_id, s.fecha_solicitud, s.total_mxn, texto(s.estado),
+        s.acciones_permitidas.filter((a) => acciones[a]).map((a) => {
+          const [etiqueta, accion, exito] = acciones[a];
+          return boton(etiqueta, () => accion(s), exito, "secundario");
+        }),
+      ]),
+      "No hay solicitudes con ese estado."),
+  ];
+}
+
+async function recepcionNueva() {
+  const [socios, planes] = await Promise.all([api("GET", "/socios"), api("GET", "/planes")]);
+  const crear = (d) => api("POST", "/solicitudes", {
+    socio_id: d.socio_id,
+    validada: d.validada === "on",
+    lineas: [{ plan_id: d.plan_id, cantidad: Number(d.cantidad) }],
+  });
+  return [
+    el("h2", {}, "Nueva solicitud"),
+    el("p", { class: "nota" }, "Se crea en estado Solicitada. Se activa desde Solicitudes."),
+    el("form", { class: "tarjeta", onsubmit: enviar(crear, "Solicitud creada.") },
+      selector("socio_id", "Socio", socios.filter((s) => s.activo).map((s) => [s.id, `${s.nombre} (${s.id})`])),
+      selector("plan_id", "Plan", planes.filter((p) => p.habilitado).map((p) => [p.id, `${p.descripcion}: ${p.precio_mxn} MXN`])),
+      el("label", {}, "Periodos", el("input", { name: "cantidad", type: "number", min: "1", value: "1", required: true })),
+      el("label", { class: "casilla" }, el("input", { name: "validada", type: "checkbox", checked: true }), "Validada por Recepción"),
+      el("button", { type: "submit" }, "Crear solicitud")),
+  ];
+}
+
+async function recepcionIngresos() {
+  const socios = await api("GET", "/socios");
+  const registrar = (d) => api("POST", `/socios/${encodeURIComponent(d.socio_id)}/ingresos`);
+  return [
+    el("h2", {}, "Ingresos"),
+    el("p", { class: "nota" }, "Exige membresía activa. Una sanción no bloquea la entrada."),
+    el("form", { class: "tarjeta", onsubmit: enviar(registrar, "Ingreso registrado.") },
+      selector("socio_id", "Socio", socios.map((s) => [s.id, `${s.nombre} (${s.id})`])),
+      el("button", { type: "submit" }, "Registrar ingreso")),
+  ];
+}
+
+// --- instructor -------------------------------------------------------------
+async function instructorClases() {
+  const clases = (await api("GET", "/clases")).filter((c) => c.instructor === estado.persona);
+  return [
+    el("h2", {}, "Mis clases"),
+    el("p", { class: "nota" }, "La cancelación exige 2 h o más de aviso y la aprueba el Administrador."),
+    tabla(["Clase", "Inicio", "Salón", "Inscritos#", "Estado", ""],
+      clases.map((c) => [
+        c.nombre, fecha(c.inicio), c.salon, c.capacidad - c.lugares_libres, texto(c.estado),
+        c.estado === "PROGRAMADA"
+          ? boton("Solicitar cancelación", () => api("POST", `/clases/${c.id}/cancelacion`,
+            { instructor: estado.persona }), "Solicitud enviada al Administrador.", "secundario")
+          : "",
+      ]),
+      "No tienes clases asignadas."),
+  ];
+}
+
+// --- administrador ----------------------------------------------------------
+async function adminClases() {
+  const clases = await api("GET", "/clases");
+  const crear = (d) => api("POST", "/clases", {
+    nombre: d.nombre, categoria: d.categoria, inicio: d.inicio, capacidad: Number(d.capacidad),
+    instructor: d.instructor, salon: d.salon,
+  });
+  return [
+    el("h2", {}, "Clases"),
+    el("form", { class: "tarjeta", onsubmit: enviar(crear, "Clase creada.") },
+      el("label", {}, "Nombre", el("input", { name: "nombre", required: true })),
+      selector("categoria", "Categoría", [["ESTANDAR", "Estándar"], ["PREMIUM", "Premium"]]),
+      el("label", {}, "Inicio", el("input", { name: "inicio", type: "datetime-local", required: true })),
+      el("label", {}, "Capacidad", el("input", { name: "capacidad", type: "number", min: "1", value: "10", required: true })),
+      el("label", {}, "Instructor", el("input", { name: "instructor" })),
+      el("label", {}, "Salón", el("input", { name: "salon" })),
+      el("button", { type: "submit" }, "Crear clase")),
+    tabla(["Clase", "Inicio", "Instructor", "Categoría", "Libres#", "Estado"],
+      clases.map((c) => [c.nombre, fecha(c.inicio), c.instructor, texto(c.categoria), c.lugares_libres, texto(c.estado)]),
+      "No hay clases."),
+  ];
+}
+
+async function adminCancelaciones() {
+  const clases = (await api("GET", "/clases")).filter((c) => c.estado === "CANCELACION_SOLICITADA");
+  const resolver = (c, aprobada) => () => api("POST", `/clases/${c.id}/cancelacion/resolver`, { aprobada });
+  return [
+    el("h2", {}, "Cancelaciones"),
+    el("p", { class: "nota" }, "Al aprobar, las reservas se cancelan sin falta y se descarta la lista de espera."),
+    tabla(["Clase", "Inicio", "Instructor", "Inscritos#", ""],
+      clases.map((c) => [
+        c.nombre, fecha(c.inicio), c.instructor, c.capacidad - c.lugares_libres,
+        [boton("Aprobar", resolver(c, true), "Clase cancelada."),
+          boton("Rechazar", resolver(c, false), "La clase sigue programada.", "secundario")],
+      ]),
+      "No hay solicitudes pendientes."),
+  ];
+}
+
+async function adminReportes() {
+  const desde = estado.filtro.desde || hoy();
+  const hasta = estado.filtro.hasta || hoy();
+  const [demanda, afluencia] = await Promise.all([
+    api("GET", "/reportes/demanda"),
+    api("GET", `/reportes/afluencia?desde=${desde}&hasta=${hasta}`).catch((error) => error),
+  ]);
+  const consultar = (d) => {
+    estado.filtro.desde = d.desde;
+    estado.filtro.hasta = d.hasta;
+    return Promise.resolve();
+  };
+  const fallo = afluencia instanceof Error;
+  return [
+    el("h2", {}, "Reportes"),
+    el("h3", {}, "Demanda por clase"),
+    tabla(["Clase", "Inicio", "Confirmadas#", "Ocupación %#", "En espera#"],
+      demanda.map((d) => [d.nombre, fecha(d.inicio), `${d.reservas_confirmadas} de ${d.capacidad}`, d.ocupacion_pct, d.en_lista_de_espera]),
+      "No hay clases."),
+    el("h3", {}, "Afluencia"),
+    el("form", { class: "tarjeta", onsubmit: enviar(consultar, "") },
+      el("label", {}, "Desde", el("input", { name: "desde", type: "date", value: desde, required: true })),
+      el("label", {}, "Hasta", el("input", { name: "hasta", type: "date", value: hasta, required: true })),
+      el("button", { type: "submit" }, "Consultar")),
+    fallo ? el("p", { class: "aviso error" }, afluencia.message) : [
+      el("p", { class: "nota" }, `Total de ingresos: ${afluencia.total}`),
+      tabla(["Día", "Ingresos#"], afluencia.por_dia.map((d) => [d.dia, d.ingresos]), ""),
+      el("h3", {}, "Por hora"),
+      tabla(["Hora", "Ingresos#"],
+        afluencia.por_hora.filter((h) => h.ingresos > 0).map((h) => [`${String(h.hora).padStart(2, "0")}:00`, h.ingresos]),
+        "Sin ingresos en este rango."),
+    ],
+  ];
+}
+
+async function adminReloj() {
+  const correr = async (d) => {
+    estado.resultado = await api("POST", "/clases/procesar-reloj", d.ahora ? { ahora: d.ahora } : {});
+  };
+  const r = estado.resultado;
+  return [
+    el("h2", {}, "Reloj del sistema"),
+    el("p", { class: "nota" }, "Expira ofertas y aplica la tolerancia de retraso. Deja la fecha vacía para usar la hora real."),
+    el("form", { class: "tarjeta", onsubmit: enviar(correr, "Reloj ejecutado.") },
+      el("label", {}, "Simular fecha y hora", el("input", { name: "ahora", type: "datetime-local" })),
+      el("button", { type: "submit" }, "Ejecutar reloj")),
+    r ? tabla(["Resultado", "Cantidad#"], [
+      ["Ofertas expiradas", r.ofertas_expiradas], ["Lugares ofrecidos", r.lugares_ofrecidos],
+      ["No-shows registrados", r.no_shows], ["Lugares asignados", r.lugares_asignados],
+    ], "") : null,
+  ];
+}
+
+async function adminEventos() {
+  const eventos = (await api("GET", "/eventos")).reverse();
+  return [
+    el("h2", {}, "Eventos"),
+    el("p", { class: "nota" }, "Domain Events publicados desde el último reinicio del servicio."),
+    tabla(["Momento", "Evento", "Socio", "Clase o solicitud", "Avisar a"],
+      eventos.map((e) => [
+        fecha(e.ocurrido_en), e.evento, e.socio_id, e.clase_id || e.solicitud_id, e.socios_a_notificar.join(", "),
+      ]),
+      "Aún no hay eventos."),
+  ];
+}
+
+// --- roles ------------------------------------------------------------------
+const ROLES = {
+  socio: {
+    nombre: "Socio",
+    detalle: "Reservar clases y consultar tu historial",
+    secciones: [["Clases", socioClases], ["Mis reservas", socioReservas], ["Mi historial", socioHistorial]],
+    personas: async () => (await api("GET", "/socios")).filter((s) => s.activo).map((s) => [s.id, `${s.nombre} (${s.id})`]),
+    pregunta: "¿Quién eres?",
+  },
+  recepcion: {
+    nombre: "Recepción",
+    detalle: "Solicitudes de membresía e ingresos",
+    secciones: [
+      ["Solicitudes", () => tablaSolicitudes("Solicitudes", ACCIONES_RECEPCION, "SOLICITADA")],
+      ["Nueva solicitud", recepcionNueva],
+      ["Ingresos", recepcionIngresos],
+    ],
+  },
+  instructor: {
+    nombre: "Instructor",
+    detalle: "Tus clases y solicitudes de cancelación",
+    secciones: [["Mis clases", instructorClases]],
+    personas: async () => {
+      const nombres = (await api("GET", "/clases")).map((c) => c.instructor).filter(Boolean);
+      return [...new Set(nombres)].sort().map((n) => [n, n]);
+    },
+    pregunta: "¿Qué instructor eres?",
+  },
+  administrador: {
+    nombre: "Administrador",
+    detalle: "Clases, aprobaciones, reportes y reloj",
+    secciones: [
+      ["Clases", adminClases],
+      ["Cancelaciones", adminCancelaciones],
+      ["Membresías", () => tablaSolicitudes("Membresías", ACCIONES_ADMIN, "ACTIVA")],
+      ["Reportes", adminReportes],
+      ["Reloj", adminReloj],
+      ["Eventos", adminEventos],
+    ],
+  },
+};
+
+// --- pantallas --------------------------------------------------------------
+async function elegirRol(clave) {
+  const rol = ROLES[clave];
+  if (!rol.personas) {
+    Object.assign(estado, { rol: clave, persona: null, nombre: "", seccion: 0, aviso: null });
+    return pintar();
+  }
+  const zona = document.getElementById("identidad");
+  document.querySelectorAll(".rol").forEach((b) => b.classList.toggle("activo", b.dataset.rol === clave));
+  try {
+    const personas = await rol.personas();
+    if (!personas.length) {
+      zona.replaceChildren(el("p", { class: "vacio" }, "No hay personas registradas para este rol."));
+      return;
+    }
+    const campo = selector("persona", rol.pregunta, personas);
+    const select = campo.querySelector("select");
+    zona.replaceChildren(el("form", {
+      class: "identidad",
+      onsubmit: (e) => {
+        e.preventDefault();
+        const nombre = select.selectedOptions[0].textContent;
+        Object.assign(estado, { rol: clave, persona: select.value, nombre, seccion: 0, aviso: null });
+        pintar();
+      },
+    }, campo, el("button", { type: "submit" }, "Entrar")));
+    select.focus();
+  } catch (error) {
+    zona.replaceChildren(el("p", { class: "aviso error" }, error.message));
+  }
+}
+
+function pantallaEntrada() {
+  return el("div", { class: "entrada" },
+    el("div", { class: "marca" }, "FITZONE"),
+    el("h1", {}, "¿Con qué rol vas a entrar?"),
+    el("p", {}, "Cada rol muestra solo sus acciones."),
+    el("div", { class: "roles" }, Object.entries(ROLES).map(([clave, rol]) => el("button", {
+      type: "button", class: "rol", "data-rol": clave, onclick: () => elegirRol(clave),
+    }, el("strong", {}, rol.nombre), el("span", {}, rol.detalle)))),
+    el("div", { id: "identidad" }));
+}
+
+async function pantallaPanel() {
+  const rol = ROLES[estado.rol];
+  const [titulo, vista] = rol.secciones[estado.seccion];
+  let contenido;
+  try {
+    contenido = await vista();
+  } catch (error) {
+    contenido = [el("h2", {}, titulo), el("p", { class: "aviso error" }, error.message)];
+  }
+  const aviso = estado.aviso;
+  return el("div", { class: "panel" },
+    el("nav", { "aria-label": "Secciones" },
+      el("div", { class: "marca" }, "FITZONE"),
+      el("div", { class: "quien" }, estado.nombre ? `${rol.nombre}: ${estado.nombre}` : rol.nombre),
+      rol.secciones.map(([nombre], i) => el("button", {
+        type: "button",
+        "aria-current": i === estado.seccion ? "page" : undefined,
+        onclick: () => {
+          estado.seccion = i;
+          estado.aviso = null;
+          pintar();
+        },
+      }, nombre)),
+      el("button", { type: "button", class: "salir", onclick: salir }, "Cambiar rol")),
+    el("main", {},
+      el("div", { class: aviso && aviso.error ? "aviso error" : "aviso", role: "status" }, aviso ? aviso.texto : ""),
+      contenido));
+}
+
+async function pintar() {
+  const raiz = document.getElementById("app");
+  raiz.replaceChildren(estado.rol ? await pantallaPanel() : pantallaEntrada());
+}
+
+pintar();
+</script>
+</body>
+</html>

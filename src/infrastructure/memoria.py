@@ -25,6 +25,9 @@ class RepositorioSociosMemoria:
     def guardar(self, socio: Socio) -> None:
         self._d[socio.id] = socio
 
+    def listar(self) -> list[Socio]:
+        return sorted(self._d.values(), key=lambda s: s.id)
+
 
 class RepositorioPlanesMemoria:
     def __init__(self, planes: dict[str, Plan]) -> None:

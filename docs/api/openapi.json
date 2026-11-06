@@ -3,7 +3,7 @@
   "info": {
     "title": "FitZone - Componentes de Lógica de Negocio",
     "description": "API del PIA (Equipo 11, FIME-UANL): membresías, clases, reservas, lista de espera, sanciones y reportes de FitZone.\n\nCódigos HTTP: **201** al crear · **200** lecturas y cambios · **400** formato inválido · **404** no existe · **409** conflicto de estado, cupo o membresía activa · **422** regla de negocio violada.",
-    "version": "0.5.0"
+    "version": "0.6.0"
   },
   "paths": {
     "/health": {
@@ -1444,6 +1444,31 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/socios": {
+      "get": {
+        "tags": [
+          "Socios"
+        ],
+        "summary": "Listar socios",
+        "operationId": "listar_socios_socios_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SocioOut"
+                  },
+                  "type": "array",
+                  "title": "Response Listar Socios Socios Get"
                 }
               }
             }

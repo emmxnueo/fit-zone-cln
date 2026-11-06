@@ -74,6 +74,9 @@ class ServicioDeClases:
     def listar(self) -> list[Clase]:
         return self.clases.listar()
 
+    def listar_socios(self) -> list[Socio]:
+        return self.socios.listar()
+
     def obtener_socio(self, socio_id: str) -> Socio:
         socio = self.socios.obtener(socio_id)
         if socio is None:

@@ -98,6 +98,17 @@ class RepositorioSociosSQL:
             ).all()
             return _a_socio(fila, list(faltas), s.get(SancionRow, socio_id))
 
+    def listar(self) -> list[Socio]:
+        with self._sesiones() as s:
+            faltas: dict[str, list[FaltaRow]] = {}
+            for f in s.scalars(select(FaltaRow).order_by(FaltaRow.id)):
+                faltas.setdefault(f.socio_id, []).append(f)
+            sanciones = {x.socio_id: x for x in s.scalars(select(SancionRow))}
+            return [
+                _a_socio(r, faltas.get(r.id, []), sanciones.get(r.id))
+                for r in s.scalars(select(SocioRow).order_by(SocioRow.id))
+            ]
+
     def guardar(self, socio: Socio) -> None:
         """Solo persiste lo que cambia en el Socio: su historial de faltas y su sanción."""
         with self._sesiones.begin() as s:

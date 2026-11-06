@@ -206,3 +206,14 @@ def test_solicitud_de_cancelacion_invalida(api):
     assert api.post(url, json={}).status_code == 400
     assert api.post("/clases/NADA/cancelacion", json={"instructor": "Ana"}).status_code == 404
     assert api.post(f"{url}/resolver", json={"aprobada": "si"}).status_code == 400
+
+
+def test_listar_socios(api):
+    socios = api.get("/socios").json()
+    assert len(socios) == 40 and socios[0]["id"] == "FIT-C001"
+
+
+def test_la_interfaz_se_sirve_en_la_raiz(api):
+    r = api.get("/")
+    assert r.status_code == 200 and "text/html" in r.headers["content-type"]
+    assert "Quattrocento Sans" in r.text and "Administrador" in r.text

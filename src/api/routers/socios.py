@@ -14,6 +14,11 @@ _404 = {404: {"model": ErrorOut, "description": "El socio no existe"}}
 _422 = {422: {"model": ErrorOut, "description": "Regla de negocio violada (RN-xx)"}}
 
 
+@router.get("", response_model=list[SocioOut], summary="Listar socios")
+def listar_socios(svc: Servicio):
+    return [socio_a_salida(s) for s in svc.listar_socios()]
+
+
 @router.get("/{socio_id}", response_model=SocioOut, summary="Consultar faltas y sanción",
             responses={**_404})
 def obtener_socio(socio_id: str, svc: Servicio):

@@ -15,6 +15,10 @@ Resumen del stack y de cómo se configura, prueba y despliega el sistema. Las de
 | CI/CD | GitHub Actions | Corre las pruebas contra PostgreSQL 16 y falla si la cobertura baja de 80% |
 | Despliegue | Render con el `Dockerfile` del repo y una base PostgreSQL de Render | Plan gratuito y despliegue automático en cada `push` a `main` |
 
+## Interfaz
+
+`src/api/web/index.html` es una sola página con JavaScript sin framework, servida por la misma API en `/`. Se eligió así para no sumar dependencias ni otro despliegue. Elegir rol solo cambia lo que se ve; no hay autenticación, así que no sustituye el control por rol de RN-32 y RN-33.
+
 ## Configuración (12-Factor App)
 
 La configuración sale del entorno, sin secretos en el código. `.env` está en `.gitignore` y `.env.example` solo trae valores de ejemplo.
