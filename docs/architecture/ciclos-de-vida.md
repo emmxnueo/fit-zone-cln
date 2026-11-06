@@ -85,7 +85,9 @@ Decisiones que el BRD no fija y que el código resuelve así:
 - **Fecha de la falta:** es la hora de inicio de la clase, para que el mes calendario (RN-26) no dependa de cuándo corra el reloj.
 - **Sanción activa:** las faltas nuevas se acumulan sin extenderla (RN-28) y cuentan para la siguiente sanción si son del mismo mes.
 
-## 3. Otros ciclos del BRD (diseñados, no programados)
+## 3. Clase (implementado) y solicitud de excepción (diseñada)
+
+El ciclo de la clase es la tabla `TRANSICIONES_CLASE` de `src/domain/state_machine.py`. Mientras la cancelación se resuelve, la clase sigue abierta a reservas; una vez cancelada, ya no (409). El Administrador no puede aprobar con la clase iniciada (409), y las clases canceladas no aparecen en el reporte de demanda.
 
 ```mermaid
 ---
@@ -116,7 +118,7 @@ stateDiagram-v2
   }
 ```
 
-Una excepción ya resuelta no se resuelve dos veces (RN-33, 409). En el código, la aprobación del Administrador llega como el campo `aprobada` de `congelar` y `dar-de-baja`; el agregado `SolicitudExcepcion` completo no se programó.
+La solicitud de excepción sigue solo diseñada. Una excepción ya resuelta no se resuelve dos veces (RN-33, 409). En el código, la aprobación del Administrador llega como el campo `aprobada` de `congelar` y `dar-de-baja`; el agregado `SolicitudExcepcion` completo no se programó.
 
 ## 4. Secuencia: activar una solicitud
 
@@ -313,4 +315,50 @@ sequenceDiagram
     end
   end
   API-->>Reloj: 200 con el resumen
+```
+
+## 9. Secuencia: cancelación de clase por el instructor
+
+```mermaid
+---
+config:
+  theme: redux-color
+---
+sequenceDiagram
+  autonumber
+  actor Instructor
+  actor Admin as Administrador
+  participant API as API de clases
+  participant SV as ServicioDeClases
+  participant AG as Clase
+  participant REP as RepositorioClases
+  participant PUB as PublicadorDeEventos
+
+  Instructor->>API: POST /clases/{id}/cancelacion
+  API->>SV: solicitar_cancelacion(clase_id, instructor)
+  SV->>AG: solicitar_cancelacion(instructor, ahora)
+  AG->>AG: siguiente_estado_clase (409 si no procede)
+  AG->>AG: ¿es su clase? ¿hay 2 h o más de aviso? (RN-29)
+  alt no cumple
+    AG-->>SV: ReglaDeNegocioViolada
+    API-->>Instructor: 422 con regla RN-29
+  else cumple
+    AG->>AG: CANCELACION_SOLICITADA, registra CancelacionDeClaseSolicitada
+    SV->>REP: guardar(clase)
+    SV->>PUB: publicar(pull_events())
+    API-->>Instructor: 200
+    Admin->>API: POST /clases/{id}/cancelacion/resolver
+    API->>SV: resolver_cancelacion(clase_id, aprobada)
+    alt aprobada
+      SV->>AG: aprobar_cancelacion(ahora)
+      AG->>AG: reservas CANCELADA sin falta, lista DESCARTADA (RN-30)
+      AG->>AG: CANCELADA, registra ClaseCancelada con los inscritos (RN-31)
+    else rechazada
+      SV->>AG: rechazar_cancelacion()
+      AG->>AG: PROGRAMADA, registra CancelacionDeClaseRechazada
+    end
+    SV->>REP: guardar(clase)
+    SV->>PUB: publicar(pull_events())
+    API-->>Admin: 200 con la clase
+  end
 ```

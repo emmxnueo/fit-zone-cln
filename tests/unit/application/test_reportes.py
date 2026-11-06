@@ -8,7 +8,7 @@ from src.application.reportes import ServicioDeReportes
 from src.domain.clase import Clase, EntradaListaEspera, EstadoEntrada, Reserva
 from src.domain.errors import ReglaDeNegocioViolada
 from src.domain.specifications import CategoriaClase
-from src.domain.state_machine import EstadoReserva
+from src.domain.state_machine import EstadoClase, EstadoReserva
 from src.infrastructure.memoria import RepositorioClasesMemoria, RepositorioIngresosMemoria
 
 INICIO = datetime(2026, 12, 1, 18, 0)
@@ -96,3 +96,10 @@ def test_solo_cuentan_reservas_confirmadas_y_quien_sigue_esperando():
 def test_demanda_ordena_de_mayor_a_menor():
     clases = [clase("Baja", 10, 1), clase("Llena", 2, 2), clase("LlenaConLista", 2, 2, 4)]
     assert [d.clase_id for d in armar(clases).demanda()] == ["LlenaConLista", "Llena", "Baja"]
+
+
+def test_la_demanda_omite_clases_canceladas():
+    c = clase("A", 5)
+    c.estado = EstadoClase.CANCELADA
+    assert armar([c, clase("B", 5)]).demanda()[0].clase_id == "B"
+    assert len(armar([c]).demanda()) == 0

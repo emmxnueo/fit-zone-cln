@@ -9,6 +9,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from src.domain.clase import Clase
 from src.domain.errors import ReglaDeNegocioViolada
+from src.domain.state_machine import EstadoClase
 
 from .puertos import RepositorioClases, RepositorioIngresos
 
@@ -69,6 +70,6 @@ class ServicioDeReportes:
     def demanda(self) -> list[DemandaDeClase]:
         """RN-36: de mayor a menor demanda, para decidir nuevos horarios (BPMN 12.6)."""
         return sorted(
-            (_demanda(c) for c in self.clases.listar()),
+            (_demanda(c) for c in self.clases.listar() if c.estado != EstadoClase.CANCELADA),
             key=lambda d: (-d.ocupacion_pct, -d.en_lista_de_espera, d.inicio),
         )

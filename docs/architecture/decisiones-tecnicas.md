@@ -38,7 +38,7 @@ La configuración sale del entorno, sin secretos en el código. `.env` está en 
 
 ## Datos iniciales
 
-La primera petición crea las tablas y carga el paquete del profesor desde `data/*.csv`: 40 socios, 20 planes y 60 solicitudes (`sembrar_si_vacia`). Solo siembra si la base está vacía. Aparte, `sembrar_clases_si_vacio` crea 3 clases de demostración para el día siguiente, que no vienen del paquete. Las faltas y sanciones usan tablas propias porque `create_all` no agrega columnas a una tabla existente y no hay migraciones.
+La primera petición crea las tablas y carga el paquete del profesor desde `data/*.csv`: 40 socios, 20 planes y 60 solicitudes (`sembrar_si_vacia`). Solo siembra si la base está vacía. Aparte, `sembrar_clases_si_vacio` crea 3 clases de demostración para el día siguiente, que no vienen del paquete. Las faltas, las sanciones y el estado de cancelación de una clase usan tablas propias porque `create_all` no agrega columnas a una tabla existente y no hay migraciones.
 
 ## Verificación del paquete
 

@@ -11,7 +11,7 @@ def _ahora() -> datetime:
 
 @dataclass(frozen=True, kw_only=True)
 class EventoDeDominio:
-    socio_id: str
+    socio_id: str = ""
     solicitud_id: str = ""
     clase_id: str = ""
     ocurrido_en: datetime = field(default_factory=_ahora)
@@ -104,3 +104,18 @@ class FaltaRegistrada(EventoDeDominio):
 @dataclass(frozen=True, kw_only=True)
 class SancionAplicada(EventoDeDominio):
     pass
+
+
+@dataclass(frozen=True, kw_only=True)
+class CancelacionDeClaseSolicitada(EventoDeDominio):
+    pass
+
+
+@dataclass(frozen=True, kw_only=True)
+class CancelacionDeClaseRechazada(EventoDeDominio):
+    pass
+
+
+@dataclass(frozen=True, kw_only=True)
+class ClaseCancelada(EventoDeDominio):
+    socios_a_notificar: tuple[str, ...] = ()  # RN-31: los inscritos

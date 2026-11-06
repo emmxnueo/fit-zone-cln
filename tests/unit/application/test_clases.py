@@ -157,3 +157,23 @@ def test_etiqueta_segun_el_plan():
     premium = svc.crear_clase("HIIT", CategoriaClase.PREMIUM, INICIO, 5)
     assert svc.etiqueta(svc.obtener(cid), "T") == "Incluida en tu membresía"
     assert svc.etiqueta(premium, "T") == "Costo adicional / Exclusiva Plan Premium"
+
+
+def test_cancelacion_aprobada_no_registra_faltas():
+    svc, cid, reloj, pub = armar()
+    svc.clases.obtener(cid).instructor = "Ana"
+    svc.reservar(cid, "T")
+    svc.solicitar_cancelacion(cid, "Ana")
+    reloj.fijar(INICIO - timedelta(minutes=30))  # aunque falte menos de 1 h
+    clase = svc.resolver_cancelacion(cid, aprobada=True)
+    assert clase.estado.value == "CANCELADA"
+    assert svc.obtener_socio("T").faltas == []
+    assert "ClaseCancelada" in nombres(pub)
+    assert svc.procesar_reloj(INICIO + timedelta(minutes=11)).no_shows == 0
+
+
+def test_cancelacion_rechazada_mantiene_la_clase():
+    svc, cid, _, _ = armar()
+    svc.clases.obtener(cid).instructor = "Ana"
+    svc.solicitar_cancelacion(cid, "Ana")
+    assert svc.resolver_cancelacion(cid, aprobada=False).estado.value == "PROGRAMADA"

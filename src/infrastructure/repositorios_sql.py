@@ -14,10 +14,11 @@ from src.domain.clase import Clase, EntradaListaEspera, EstadoEntrada, Reserva
 from src.domain.entities import Plan, Socio
 from src.domain.solicitud import SolicitudDeMembresia
 from src.domain.specifications import CategoriaClase
-from src.domain.state_machine import EstadoMembresia, EstadoReserva
+from src.domain.state_machine import EstadoClase, EstadoMembresia, EstadoReserva
 from src.domain.value_objects import Cantidad, Dinero, Falta, LineaSolicitud, MotivoFalta
 
 from .db import (
+    CancelacionClaseRow,
     ClaseRow,
     EntradaEsperaRow,
     FaltaRow,
@@ -79,6 +80,7 @@ def _a_clase(r: ClaseRow) -> Clase:
             )
             for x in r.lista_espera
         ],
+        estado=EstadoClase(r.cancelacion.estado) if r.cancelacion else EstadoClase.PROGRAMADA,
     )
 
 
@@ -205,7 +207,8 @@ class RepositorioClasesSQL:
 
     def _consulta(self):
         return select(ClaseRow).options(
-            selectinload(ClaseRow.reservas), selectinload(ClaseRow.lista_espera)
+            selectinload(ClaseRow.reservas), selectinload(ClaseRow.lista_espera),
+            selectinload(ClaseRow.cancelacion),
         )
 
     def obtener(self, clase_id: str) -> Clase | None:
@@ -229,6 +232,12 @@ class RepositorioClasesSQL:
             fila.capacidad = clase.capacidad
             fila.instructor = clase.instructor
             fila.salon = clase.salon
+            if clase.estado == EstadoClase.PROGRAMADA:
+                fila.cancelacion = None  # delete-orphan borra la solicitud rechazada
+            elif fila.cancelacion is None:
+                fila.cancelacion = CancelacionClaseRow(estado=clase.estado.value)
+            else:
+                fila.cancelacion.estado = clase.estado.value
             reservas = {r.id: r for r in fila.reservas}
             for r in clase.reservas:
                 if r.id in reservas:

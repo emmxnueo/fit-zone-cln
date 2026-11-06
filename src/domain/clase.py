@@ -1,4 +1,5 @@
-"""Aggregate Root: Clase, con sus reservas y su lista de espera (RN-11 a RN-24).
+"""Aggregate Root: Clase, con sus reservas y su lista de espera (RN-11 a RN-24,
+RN-29 a RN-31).
 
 La clase protege su capacidad y el orden de la lista. Las operaciones que
 dependen del tiempo reciben `ahora`: el dominio no lee el reloj.
@@ -21,11 +22,19 @@ from .specifications import (
     SinSancionActiva,
     SocioActivo,
 )
-from .state_machine import AccionReserva, EstadoReserva, siguiente_estado_reserva
+from .state_machine import (
+    AccionClase,
+    AccionReserva,
+    EstadoClase,
+    EstadoReserva,
+    siguiente_estado_clase,
+    siguiente_estado_reserva,
+)
 
 ANTICIPACION_SIN_FALTA = timedelta(hours=1)  # RN-15, RN-16
 TOLERANCIA_RETRASO = timedelta(minutes=10)  # RN-17
 PLAZO_OFERTA = timedelta(minutes=15)  # RN-20
+AVISO_CANCELACION_CLASE = timedelta(hours=2)  # RN-29
 
 
 class EstadoEntrada(str, Enum):
@@ -33,6 +42,7 @@ class EstadoEntrada(str, Enum):
     OFERTADA = "OFERTADA"
     ASIGNADA = "ASIGNADA"
     EXPIRADA = "EXPIRADA"
+    DESCARTADA = "DESCARTADA"  # la clase se canceló (RN-30)
 
 
 @dataclass
@@ -74,6 +84,7 @@ class Clase:
     salon: str = ""
     reservas: list[Reserva] = field(default_factory=list)
     lista_espera: list[EntradaListaEspera] = field(default_factory=list)
+    estado: EstadoClase = EstadoClase.PROGRAMADA
     _eventos: list[ev.EventoDeDominio] = field(default_factory=list, repr=False)
 
     def __post_init__(self) -> None:
@@ -114,6 +125,8 @@ class Clase:
     def reservar(self, ctx: ContextoReserva) -> Reserva | EntradaListaEspera:
         """RN-11, RN-13. Sin lugar, o con socios esperando (RN-19), va a la lista."""
         socio_id = ctx.socio.id
+        if self.estado == EstadoClase.CANCELADA:
+            raise ConflictoDeEstado("La clase fue cancelada", "RN-30")
         if ctx.ahora >= self.inicio:
             raise ConflictoDeEstado("La clase ya inició", "RN-13")
         exigir_elegibilidad(ctx)
@@ -186,6 +199,35 @@ class Clase:
             ))
             self._eventos.append(ev.LugarLiberado(socio_id=reserva.socio_id, clase_id=self.id))
             self._asignar_a_presente(ahora, asignables)
+
+    def solicitar_cancelacion(self, instructor: str, ahora: datetime) -> None:
+        """RN-29: solo el instructor asignado y con 2 h o más de aviso."""
+        nuevo = siguiente_estado_clase(self.estado, AccionClase.SOLICITAR_CANCELACION)
+        if instructor != self.instructor:
+            raise ReglaDeNegocioViolada("Solo el instructor asignado puede solicitarla", "RN-29")
+        if self.inicio - ahora < AVISO_CANCELACION_CLASE:
+            raise ReglaDeNegocioViolada("La solicitud exige 2 h o más de aviso", "RN-29")
+        self.estado = nuevo
+        self._eventos.append(ev.CancelacionDeClaseSolicitada(clase_id=self.id))
+
+    def aprobar_cancelacion(self, ahora: datetime) -> None:
+        """RN-30, RN-31: cancela las reservas sin falta y descarta la lista de espera."""
+        nuevo = siguiente_estado_clase(self.estado, AccionClase.APROBAR_CANCELACION)
+        if ahora >= self.inicio:
+            raise ConflictoDeEstado("La clase ya inició", "RN-30")
+        inscritos = tuple(r.socio_id for r in self.confirmadas)
+        for reserva in self.confirmadas:
+            reserva.estado = siguiente_estado_reserva(reserva.estado, AccionReserva.CANCELAR)
+        for entrada in self.lista_espera:
+            if entrada.estado in (EstadoEntrada.EN_ESPERA, EstadoEntrada.OFERTADA):
+                entrada.estado = EstadoEntrada.DESCARTADA
+        self.estado = nuevo
+        self._eventos.append(ev.ClaseCancelada(clase_id=self.id, socios_a_notificar=inscritos))
+
+    def rechazar_cancelacion(self) -> None:
+        """RN-30: la clase sigue programada y no se avisa a los socios."""
+        self.estado = siguiente_estado_clase(self.estado, AccionClase.RECHAZAR_CANCELACION)
+        self._eventos.append(ev.CancelacionDeClaseRechazada(clase_id=self.id))
 
     # --- internos -----------------------------------------------------------
     def _esta_en_lista(self, socio_id: str) -> bool:

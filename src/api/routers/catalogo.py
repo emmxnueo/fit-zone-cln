@@ -27,6 +27,8 @@ def listar_planes(svc: Servicio):
 def listar_eventos(svc: Servicio):
     return [
         EventoOut(evento=e.nombre, solicitud_id=e.solicitud_id, clase_id=e.clase_id,
-                  socio_id=e.socio_id, ocurrido_en=e.ocurrido_en)
+                  socio_id=e.socio_id,
+                  socios_a_notificar=list(getattr(e, "socios_a_notificar", ())),
+                  ocurrido_en=e.ocurrido_en)
         for e in svc.eventos()
     ]

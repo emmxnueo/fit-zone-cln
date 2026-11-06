@@ -9,7 +9,7 @@ from sqlalchemy import text
 
 from src.domain.clase import EstadoEntrada
 from src.domain.specifications import CategoriaClase
-from src.domain.state_machine import EstadoReserva
+from src.domain.state_machine import EstadoClase, EstadoReserva
 from src.infrastructure.composicion import crear_servicios_sql, sembrar_clases_si_vacio
 from src.infrastructure.db import crear_motor
 from src.infrastructure.reloj import RelojDelSistema
@@ -107,3 +107,19 @@ def test_reportes_leen_lo_persistido(entorno):
     assert s.reportes.afluencia(dia + timedelta(days=1), dia + timedelta(days=1)).total == 0
     demanda = s.reportes.demanda()[0]
     assert (demanda.reservas_confirmadas, demanda.en_lista_de_espera) == (1, 1)
+
+
+def test_ciclo_de_cancelacion_persiste(entorno):
+    s, (t, a, _), _ = entorno
+    c = s.clases.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO, 1, "Ana")
+    s.clases.reservar(c.id, t)
+    s.clases.reservar(c.id, a)
+    s.clases.solicitar_cancelacion(c.id, "Ana")
+    assert s.clases.obtener(c.id).estado == EstadoClase.CANCELACION_SOLICITADA
+    s.clases.resolver_cancelacion(c.id, aprobada=False)
+    assert s.clases.obtener(c.id).estado == EstadoClase.PROGRAMADA
+    s.clases.solicitar_cancelacion(c.id, "Ana")
+    s.clases.resolver_cancelacion(c.id, aprobada=True)
+    leida = s.clases.obtener(c.id)
+    assert leida.estado == EstadoClase.CANCELADA and leida.confirmadas == []
+    assert leida.lista_espera[0].estado == EstadoEntrada.DESCARTADA

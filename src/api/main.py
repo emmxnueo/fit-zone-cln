@@ -16,7 +16,7 @@ app = FastAPI(
         "inválido · **404** no existe · **409** conflicto de estado, cupo o membresía "
         "activa · **422** regla de negocio violada."
     ),
-    version="0.4.0",
+    version="0.5.0",
 )
 
 

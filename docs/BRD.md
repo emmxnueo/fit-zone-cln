@@ -197,6 +197,8 @@ Las reglas tienen identificador estable (RN-xx) para trazar cada una hasta el c�
 - Un lugar ofrecido queda apartado hasta que la oferta se resuelva, y quien reserva mientras hay socios esperando entra a la lista aunque quede un lugar libre (RN-19).
 - Confirmar una oferta vuelve a exigir la elegibilidad de RN-13.
 - Las faltas que ocurren durante una sanción activa no la extienden (RN-28), pero cuentan para la siguiente si son del mismo mes calendario.
+- Mientras se resuelve la cancelación de una clase, la clase sigue abierta a reservas. El Administrador no puede aprobarla con la clase ya iniciada.
+- El instructor se identifica por el nombre asignado a la clase; no hay autenticación por rol.
 - La hora del negocio es la local de Monterrey. La fecha de una falta es la hora de inicio de la clase.
 
 ## 9. Criterios de éxito

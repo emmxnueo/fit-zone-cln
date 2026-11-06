@@ -93,6 +93,9 @@ class ClaseRow(Base):
     lista_espera: Mapped[list["EntradaEsperaRow"]] = relationship(
         cascade="all, delete-orphan", order_by="EntradaEsperaRow.orden"
     )
+    cancelacion: Mapped["CancelacionClaseRow | None"] = relationship(
+        cascade="all, delete-orphan", uselist=False
+    )
 
 
 class ReservaRow(Base):
@@ -113,6 +116,15 @@ class EntradaEsperaRow(Base):
     registrada_en: Mapped[datetime] = mapped_column(DateTime)
     estado: Mapped[str] = mapped_column(String(20))
     ofertada_en: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class CancelacionClaseRow(Base):
+    """Sin fila, la clase está PROGRAMADA. Va en tabla propia por la misma razón
+    que las faltas: `create_all` no agrega columnas a `clases`."""
+
+    __tablename__ = "cancelaciones_clase"
+    clase_id: Mapped[str] = mapped_column(ForeignKey("clases.id"), primary_key=True)
+    estado: Mapped[str] = mapped_column(String(30))
 
 
 class IngresoRow(Base):

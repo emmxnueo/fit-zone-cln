@@ -3,7 +3,7 @@
   "info": {
     "title": "FitZone - Componentes de Lógica de Negocio",
     "description": "API del PIA (Equipo 11, FIME-UANL): membresías, clases, reservas, lista de espera, sanciones y reportes de FitZone.\n\nCódigos HTTP: **201** al crear · **200** lecturas y cambios · **400** formato inválido · **404** no existe · **409** conflicto de estado, cupo o membresía activa · **422** regla de negocio violada.",
-    "version": "0.4.0"
+    "version": "0.5.0"
   },
   "paths": {
     "/health": {
@@ -1047,6 +1047,172 @@
         }
       }
     },
+    "/clases/{clase_id}/cancelacion": {
+      "post": {
+        "tags": [
+          "Clases y reservas"
+        ],
+        "summary": "Solicitar la cancelación (PROGRAMADA → CANCELACION_SOLICITADA)",
+        "description": "Solo el instructor asignado y con 2 h o más de aviso (RN-29).",
+        "operationId": "solicitar_cancelacion_clases__clase_id__cancelacion_post",
+        "parameters": [
+          {
+            "name": "clase_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clase Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelacionClaseIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaseOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Formato de la solicitud inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La clase, la reserva o el socio no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Clase iniciada, reserva repetida u oferta inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regla de negocio violada (RN-xx)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clases/{clase_id}/cancelacion/resolver": {
+      "post": {
+        "tags": [
+          "Clases y reservas"
+        ],
+        "summary": "Resolver la cancelación (Administrador)",
+        "description": "Al aprobarse se cancelan las reservas sin falta y se descarta la lista de espera; al rechazarse, la clase sigue PROGRAMADA (RN-30).",
+        "operationId": "resolver_cancelacion_clases__clase_id__cancelacion_resolver_post",
+        "parameters": [
+          {
+            "name": "clase_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Clase Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaseOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Formato de la solicitud inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La clase, la reserva o el socio no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Clase iniciada, reserva repetida u oferta inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/clases/{clase_id}/reservas": {
       "post": {
         "tags": [
@@ -1574,6 +1740,23 @@
         ],
         "title": "AfluenciaOut"
       },
+      "CancelacionClaseIn": {
+        "properties": {
+          "instructor": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Instructor",
+            "examples": [
+              "Ana Ruiz"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "instructor"
+        ],
+        "title": "CancelacionClaseIn"
+      },
       "CategoriaClase": {
         "type": "string",
         "enum": [
@@ -1663,6 +1846,10 @@
             "type": "string",
             "title": "Salon"
           },
+          "estado": {
+            "type": "string",
+            "title": "Estado"
+          },
           "lugares_libres": {
             "type": "integer",
             "title": "Lugares Libres"
@@ -1703,6 +1890,7 @@
           "capacidad",
           "instructor",
           "salon",
+          "estado",
           "lugares_libres",
           "reservas",
           "lista_espera"
@@ -1714,7 +1902,7 @@
           "aprobada": {
             "type": "boolean",
             "title": "Aprobada",
-            "description": "Resolución del Administrador sobre la solicitud de excepción (RN-09, RN-10)."
+            "description": "Resolución del Administrador (RN-09, RN-10, RN-30)."
           }
         },
         "type": "object",
@@ -1899,6 +2087,14 @@
           "socio_id": {
             "type": "string",
             "title": "Socio Id"
+          },
+          "socios_a_notificar": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Socios A Notificar",
+            "default": []
           },
           "ocurrido_en": {
             "type": "string",
@@ -2413,6 +2609,13 @@
           "type": {
             "type": "string",
             "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
         "type": "object",

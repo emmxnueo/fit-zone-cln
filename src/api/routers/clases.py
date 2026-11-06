@@ -4,8 +4,10 @@ from fastapi import APIRouter, Depends
 
 from src.api.dependencias import get_servicio_clases
 from src.api.schemas import (
+    CancelacionClaseIn,
     ClaseIn,
     ClaseOut,
+    DecisionIn,
     ErrorOut,
     RelojIn,
     ReservaOut,
@@ -64,6 +66,23 @@ def procesar_reloj(svc: Servicio, datos: RelojIn | None = None):
             responses={**_404})
 def obtener_clase(clase_id: str, svc: Servicio, socio_id: str | None = None):
     return _con_etiqueta(svc, svc.obtener(clase_id), socio_id)
+
+
+@router.post("/{clase_id}/cancelacion", response_model=ClaseOut,
+             summary="Solicitar la cancelación (PROGRAMADA → CANCELACION_SOLICITADA)",
+             description="Solo el instructor asignado y con 2 h o más de aviso (RN-29).",
+             responses={**_400, **_404, **_409, **_422})
+def solicitar_cancelacion(clase_id: str, datos: CancelacionClaseIn, svc: Servicio):
+    return clase_a_salida(svc.solicitar_cancelacion(clase_id, datos.instructor))
+
+
+@router.post("/{clase_id}/cancelacion/resolver", response_model=ClaseOut,
+             summary="Resolver la cancelación (Administrador)",
+             description="Al aprobarse se cancelan las reservas sin falta y se descarta la "
+                         "lista de espera; al rechazarse, la clase sigue PROGRAMADA (RN-30).",
+             responses={**_400, **_404, **_409})
+def resolver_cancelacion(clase_id: str, decision: DecisionIn, svc: Servicio):
+    return clase_a_salida(svc.resolver_cancelacion(clase_id, decision.aprobada))
 
 
 @router.post("/{clase_id}/reservas", response_model=ResultadoReservaOut, status_code=201,

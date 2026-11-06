@@ -161,3 +161,48 @@ def test_reporte_de_demanda(api):
 
 def test_dependencia_por_defecto_entrega_el_servicio_de_reportes():
     assert isinstance(get_servicio_reportes(), ServicioDeReportes)
+
+
+def clase_de_instructor(api, en=timedelta(days=1)):
+    inicio = RelojDelSistema().ahora() + en
+    return api.post("/clases", json={
+        "nombre": "Yoga", "categoria": "ESTANDAR", "inicio": inicio.isoformat(),
+        "capacidad": 1, "instructor": "Ana Ruiz",
+    }).json()
+
+
+def test_cancelacion_de_clase_aprobada(api):
+    a = con_membresia(api, NORMALES[0])
+    clase = clase_de_instructor(api)
+    reservar(api, clase, a)
+    url = f"/clases/{clase['id']}/cancelacion"
+    r = api.post(url, json={"instructor": "Ana Ruiz"})
+    assert r.status_code == 200 and r.json()["estado"] == "CANCELACION_SOLICITADA"
+    assert api.post(url, json={"instructor": "Ana Ruiz"}).status_code == 409
+    r = api.post(f"{url}/resolver", json={"aprobada": True})
+    assert r.json()["estado"] == "CANCELADA"
+    assert r.json()["reservas"][0]["estado"] == "CANCELADA"
+    assert api.post(f"{url}/resolver", json={"aprobada": True}).status_code == 409
+    assert api.get(f"/socios/{a}").json()["faltas"] == []
+    evento = next(e for e in api.get("/eventos").json() if e["evento"] == "ClaseCancelada")
+    assert evento["socios_a_notificar"] == [a]
+    assert reservar(api, clase, a).status_code == 409
+
+
+def test_cancelacion_de_clase_rechazada(api):
+    clase = clase_de_instructor(api)
+    url = f"/clases/{clase['id']}/cancelacion"
+    api.post(url, json={"instructor": "Ana Ruiz"})
+    r = api.post(f"{url}/resolver", json={"aprobada": False})
+    assert r.json()["estado"] == "PROGRAMADA"
+
+
+def test_solicitud_de_cancelacion_invalida(api):
+    clase = clase_de_instructor(api, en=timedelta(minutes=90))
+    url = f"/clases/{clase['id']}/cancelacion"
+    r = api.post(url, json={"instructor": "Ana Ruiz"})
+    assert r.status_code == 422 and r.json()["regla"] == "RN-29"
+    assert api.post(url, json={"instructor": "Otro"}).status_code == 422
+    assert api.post(url, json={}).status_code == 400
+    assert api.post("/clases/NADA/cancelacion", json={"instructor": "Ana"}).status_code == 404
+    assert api.post(f"{url}/resolver", json={"aprobada": "si"}).status_code == 400

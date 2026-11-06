@@ -33,7 +33,7 @@ class SolicitudIn(BaseModel):
 
 class DecisionIn(BaseModel):
     aprobada: StrictBool = Field(
-        description="Resolución del Administrador sobre la solicitud de excepción (RN-09, RN-10)."
+        description="Resolución del Administrador (RN-09, RN-10, RN-30)."
     )
 
 
@@ -54,6 +54,10 @@ class ClaseIn(BaseModel):
 
 class SocioIn(BaseModel):
     socio_id: str = Field(min_length=1, examples=["FIT-C001"])
+
+
+class CancelacionClaseIn(BaseModel):
+    instructor: str = Field(min_length=1, examples=["Ana Ruiz"])
 
 
 class RelojIn(BaseModel):
@@ -123,6 +127,7 @@ class ClaseOut(BaseModel):
     capacidad: int
     instructor: str
     salon: str
+    estado: str
     lugares_libres: int
     etiqueta: str | None = Field(
         default=None, description="Solo si se consulta con `socio_id` (RN-14)."
@@ -198,6 +203,7 @@ class EventoOut(BaseModel):
     solicitud_id: str
     clase_id: str
     socio_id: str
+    socios_a_notificar: list[str] = []
     ocurrido_en: datetime
 
 
@@ -239,6 +245,7 @@ def clase_a_salida(c: Clase, etiqueta: str | None = None) -> ClaseOut:
         capacidad=c.capacidad,
         instructor=c.instructor,
         salon=c.salon,
+        estado=c.estado.value,
         lugares_libres=c.lugares_libres,
         etiqueta=etiqueta,
         reservas=[

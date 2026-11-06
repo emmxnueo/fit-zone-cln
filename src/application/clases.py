@@ -122,6 +122,22 @@ class ServicioDeClases:
         self._guardar(clase)
         return reserva
 
+    def solicitar_cancelacion(self, clase_id: str, instructor: str) -> Clase:
+        clase = self.obtener(clase_id)
+        clase.solicitar_cancelacion(instructor, self.reloj.ahora())
+        self._guardar(clase)
+        return clase
+
+    def resolver_cancelacion(self, clase_id: str, aprobada: bool) -> Clase:
+        """RN-30: lo resuelve el Administrador."""
+        clase = self.obtener(clase_id)
+        if aprobada:
+            clase.aprobar_cancelacion(self.reloj.ahora())
+        else:
+            clase.rechazar_cancelacion()
+        self._guardar(clase)
+        return clase
+
     def registrar_ingreso(self, socio_id: str) -> datetime:
         """RN-05: solo con membresía vigente. La sanción no bloquea el acceso (RN-26)."""
         self.obtener_socio(socio_id)

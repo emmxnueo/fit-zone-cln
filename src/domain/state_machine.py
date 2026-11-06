@@ -1,4 +1,5 @@
-"""Máquinas de estados de la membresía (RN-41) y de la reserva (RN-15 a RN-17).
+"""Máquinas de estados de la membresía (RN-41), la reserva (RN-15 a RN-17) y la
+clase (RN-29, RN-30).
 
 Cualquier par (estado, acción) que no esté en su tabla se rechaza (409).
 """
@@ -81,4 +82,33 @@ def siguiente_estado_reserva(estado: EstadoReserva, accion: AccionReserva) -> Es
     except KeyError:
         raise TransicionInvalida(
             f"No se puede '{accion.value}' una reserva en {estado.value}", "RN-15"
+        ) from None
+
+
+class EstadoClase(str, Enum):
+    PROGRAMADA = "PROGRAMADA"
+    CANCELACION_SOLICITADA = "CANCELACION_SOLICITADA"
+    CANCELADA = "CANCELADA"  # estado final
+
+
+class AccionClase(str, Enum):
+    SOLICITAR_CANCELACION = "solicitar_cancelacion"
+    APROBAR_CANCELACION = "aprobar_cancelacion"
+    RECHAZAR_CANCELACION = "rechazar_cancelacion"
+
+
+TRANSICIONES_CLASE: dict[tuple[EstadoClase, AccionClase], EstadoClase] = {
+    (EstadoClase.PROGRAMADA, AccionClase.SOLICITAR_CANCELACION): EstadoClase.CANCELACION_SOLICITADA,
+    (EstadoClase.CANCELACION_SOLICITADA, AccionClase.APROBAR_CANCELACION): EstadoClase.CANCELADA,
+    (EstadoClase.CANCELACION_SOLICITADA, AccionClase.RECHAZAR_CANCELACION): EstadoClase.PROGRAMADA,
+}
+
+
+def siguiente_estado_clase(estado: EstadoClase, accion: AccionClase) -> EstadoClase:
+    try:
+        return TRANSICIONES_CLASE[(estado, accion)]
+    except KeyError:
+        regla = "RN-29" if accion == AccionClase.SOLICITAR_CANCELACION else "RN-30"
+        raise TransicionInvalida(
+            f"No se puede '{accion.value}' una clase en {estado.value}", regla
         ) from None

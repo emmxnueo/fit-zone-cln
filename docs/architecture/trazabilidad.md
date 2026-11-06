@@ -42,6 +42,9 @@ Recorre el camino **necesidad (BN) → historia (US) y Gherkin → regla (RN) �
 | **RN-20, RN-22** oferta de 15 min, una por clase | US-04, US-20 | `Clase.confirmar_oferta`, `expirar_oferta`, `oferta_activa` | `D/clase::test_confirmar_a_los_15_minutos_exactos`, `test_oferta_vencida_pasa_al_siguiente`, `test_solo_una_oferta_activa_y_nadie_se_salta_la_lista`; `A/clases::test_reloj_expira_la_oferta_y_ofrece_al_siguiente` | Parcial: igual que RN-17; la oferta se publica como evento, sin aviso real (RN-34) |
 | **RN-21, RN-23** asignación por retraso y lugar libre | US-19, US-20 | `Clase._asignar_a_presente` | `D/clase::test_retraso_mayor_a_10_minutos_asigna_al_presente`, `test_nadie_presente_deja_el_lugar_libre`; `A/clases::test_reloj_aplica_no_show_y_asigna_al_presente` | Implementada |
 | **RN-25 a RN-28** faltas y sanción automática | US-06 | `Socio.registrar_falta`; suscriptor `ServicioDeClases._registrar_falta`; `SinSancionActiva` | `D/faltas::*`; `A/clases::test_tres_faltas_sancionan_y_bloquean_reservas_pero_no_el_acceso`; `I/clases::test_no_show_falta_sancion_e_ingresos_persisten` | Implementada |
+| **RN-29** solicitud del instructor (422) | US-18 | `Clase.solicitar_cancelacion`; `POST /clases/{id}/cancelacion`; `TRANSICIONES_CLASE` | `D/clase::test_solicitud_con_aviso_suficiente`, `test_solicitud_rechazada_deja_la_clase_programada`; `API/clases::test_solicitud_de_cancelacion_invalida` | Parcial: el instructor se identifica por nombre, sin autenticación |
+| **RN-30** resolución del Administrador | US-07, US-18 | `Clase.aprobar_cancelacion`, `rechazar_cancelacion`; `POST /clases/{id}/cancelacion/resolver` | `D/clase::test_aprobar_cancela_reservas_y_descarta_la_lista`, `test_rechazar_vuelve_a_programada_sin_avisar_a_los_socios`; `A/clases::test_cancelacion_aprobada_no_registra_faltas`; `I/clases::test_ciclo_de_cancelacion_persiste`; `API/clases::test_cancelacion_de_clase_aprobada` | Parcial: igual que RN-09, la aprobación llega como el campo `aprobada` |
+| **RN-31** aviso a los inscritos | US-07 | `ClaseCancelada.socios_a_notificar` | `D/clase::test_aprobar_sin_inscritos_no_notifica_a_nadie`; `API/clases::test_cancelacion_de_clase_aprobada` | Parcial: el evento lleva a quién avisar; falta el canal real (RN-34) |
 | **RN-34** notificaciones por puerto | US-04, US-07 | `PublicadorDeEventos` y `PublicadorEnMemoria.suscribir` (los eventos se publican; no hay suscriptor de push o correo) | `A/servicio::test_publicador_notifica_a_los_suscriptores`; `A/servicio::test_activar_persiste_y_publica_el_evento` | Parcial: el mecanismo existe, el canal real no |
 | **RN-35** reporte de afluencia (422 con rango inválido) | US-08 | `ServicioDeReportes.afluencia`; `RepositorioIngresos.entre`; `GET /reportes/afluencia` | `A/reportes::test_afluencia_agrupa_por_hora_y_dia_de_la_semana`, `test_rango_sin_ingresos_sale_en_ceros`, `test_rango_invalido_se_rechaza`; `I/clases::test_reportes_leen_lo_persistido`; `API/clases::test_reporte_de_afluencia` | Implementada |
 | **RN-36** reporte de demanda | US-09 | `ServicioDeReportes.demanda`; `GET /reportes/demanda` | `A/reportes::test_clase_llena_con_lista_de_espera`, `test_clase_sin_reservas`, `test_demanda_ordena_de_mayor_a_menor`; `API/clases::test_reporte_de_demanda` | Implementada |
@@ -58,7 +61,6 @@ Recorre el camino **necesidad (BN) → historia (US) y Gherkin → regla (RN) �
 | RN-01, RN-02 | Edad mínima y deslinde | US-11, US-15 | BRD 7.1; BPMN 12.1; Gherkin US-11 y US-15 |
 | RN-06, RN-07 | Upgrade, downgrade y cancelación anticipada | US-13 | BRD 7.1; Gherkin US-13; `CalculoDeCambioDePlan` (Act3) |
 | RN-12 | Ajuste de aforo | US-17 | BRD 7.2; depende de `SolicitudExcepcion` |
-| RN-29 a RN-31 | Cancelación de clase por el instructor | US-07, US-18 | BRD 7.5; BPMN 12.4; ciclo de la Clase en [ciclos-de-vida.md](ciclos-de-vida.md) |
 | RN-32, RN-33 | Solicitudes de excepción | US-12, US-17 | BRD 7.5; BPMN 12.5; ciclo de la solicitud de excepción |
 
 ## 3. Necesidades de negocio
@@ -67,7 +69,7 @@ Recorre el camino **necesidad (BN) → historia (US) y Gherkin → regla (RN) �
 |---|---|---|---|
 | **BN-01** | Lista de espera automática | RN-19 a RN-24 | **Implementada** (ADR-002); falta el aviso real y la tarea programada |
 | **BN-02** | Sanción por no-show | RN-15 a RN-18, RN-25 a RN-28 | **Implementada** (ADR-003) |
-| BN-03 | Aviso de cancelación de clase | RN-29 a RN-31, RN-34 | Diseñada |
+| **BN-03** | Aviso de cancelación de clase | RN-29 a RN-31, RN-34 | **Implementada**, sin canal real de aviso |
 | **BN-04, BN-05** | Reportes de afluencia y demanda | RN-35, RN-36 | **Implementada** |
 | BN-06 | Clases incluidas frente a costo adicional | RN-14 | Parcial: etiquetas y bloqueo, sin cobro |
 | BN-07 | Deslinde de 16 y 17 años | RN-01, RN-02 | Diseñada |
@@ -95,6 +97,8 @@ Recorre el camino **necesidad (BN) → historia (US) y Gherkin → regla (RN) �
 | `POST /clases/{id}/reservas/{rid}/cancelar` | Cancelar | RN-15, RN-16, RN-20 | 200, 404, 409 | `API/clases::test_cancelar_ofrecer_y_confirmar` |
 | `POST /clases/{id}/oferta/confirmar` | Confirmar oferta | RN-20, RN-13 | 200, 400, 404, 409, 422 | `API/clases::test_cancelar_ofrecer_y_confirmar` |
 | `POST /clases/procesar-reloj` | Actor Sistema | RN-17, RN-20, RN-21, RN-23 | 200, 400 | `API/clases::test_ingreso_y_tolerancia_con_el_reloj` |
+| `POST /clases/{id}/cancelacion` | Solicitar cancelación | RN-29 | 200, 400, 404, 409, 422 | `API/clases::test_cancelacion_de_clase_aprobada`, `test_solicitud_de_cancelacion_invalida` |
+| `POST /clases/{id}/cancelacion/resolver` | Aprobar o rechazar | RN-30, RN-31 | 200, 400, 404, 409 | `API/clases::test_cancelacion_de_clase_aprobada`, `test_cancelacion_de_clase_rechazada` |
 | `GET /reportes/afluencia` | Afluencia por hora y día | RN-35 | 200, 400, 422 | `API/clases::test_reporte_de_afluencia`, `test_reporte_de_afluencia_con_rango_invalido` |
 | `GET /reportes/demanda` | Ocupación y lista de espera | RN-36 | 200 | `API/clases::test_reporte_de_demanda` |
 | `GET /socios/{id}`, `POST /socios/{id}/ingresos` | Faltas, sanción e ingreso | RN-05, RN-18, RN-26 | 200, 201, 404, 422 | `API/clases::test_ingreso_sin_membresia_es_422` |

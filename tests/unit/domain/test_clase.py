@@ -8,7 +8,7 @@ from src.domain.clase import Clase, EntradaListaEspera, EstadoEntrada, Reserva
 from src.domain.entities import Socio
 from src.domain.errors import ConflictoDeEstado, ReglaDeNegocioViolada, TransicionInvalida
 from src.domain.specifications import CategoriaClase, ContextoReserva, ElegibleParaReservar
-from src.domain.state_machine import EstadoReserva
+from src.domain.state_machine import EstadoClase, EstadoReserva
 
 INICIO = datetime(2026, 12, 1, 18, 0)
 ANTES = INICIO - timedelta(days=1)
@@ -285,3 +285,102 @@ def test_oferta_confirmada_despues_del_limite_no_es_no_show():
     tardia = c.confirmar_oferta(ctx("A", INICIO + timedelta(minutes=12)))
     c.aplicar_tolerancia(INICIO + timedelta(minutes=13), set(), set())
     assert tardia.estado == EstadoReserva.CONFIRMADA
+
+
+# --- US-07, US-18: cancelación de la clase ----------------------------------
+def con_instructor(capacidad=1):
+    return Clase("C1", "Yoga", CategoriaClase.ESTANDAR, INICIO, capacidad, instructor="Ana")
+
+
+def solicitada(capacidad=1):
+    c = con_instructor(capacidad)
+    c.solicitar_cancelacion("Ana", ANTES)
+    c.pull_events()
+    return c
+
+
+@pytest.mark.parametrize("aviso", [timedelta(hours=3), timedelta(hours=2)])
+def test_solicitud_con_aviso_suficiente(aviso):
+    c = con_instructor()
+    c.solicitar_cancelacion("Ana", INICIO - aviso)
+    assert c.estado == EstadoClase.CANCELACION_SOLICITADA
+    assert tipos(c) == [ev.CancelacionDeClaseSolicitada]
+
+
+@pytest.mark.parametrize("instructor, ahora", [
+    ("Ana", INICIO - timedelta(minutes=90)),
+    ("Luis", ANTES),
+])
+def test_solicitud_rechazada_deja_la_clase_programada(instructor, ahora):
+    c = con_instructor()
+    with pytest.raises(ReglaDeNegocioViolada) as e:
+        c.solicitar_cancelacion(instructor, ahora)
+    assert e.value.regla == "RN-29" and c.estado == EstadoClase.PROGRAMADA
+
+
+def test_aprobar_cancela_reservas_y_descarta_la_lista():
+    c = con_instructor(capacidad=2)
+    r1 = c.reservar(ctx("A"))
+    r2 = c.reservar(ctx("B"))
+    c.reservar(ctx("C"))
+    c.reservar(ctx("D"))
+    c.cancelar_reserva(r2, ANTES)  # C queda con oferta y D en espera
+    c.solicitar_cancelacion("Ana", ANTES)
+    c.pull_events()
+    c.aprobar_cancelacion(ANTES)
+    assert c.estado == EstadoClase.CANCELADA
+    assert r1.estado == EstadoReserva.CANCELADA  # sin falta: no es CANCELADA_TARDE
+    assert {e.estado for e in c.lista_espera} == {EstadoEntrada.DESCARTADA}
+    eventos = c.pull_events()
+    assert [type(e) for e in eventos] == [ev.ClaseCancelada]
+    assert eventos[0].socios_a_notificar == ("A",)
+
+
+def test_aprobar_sin_inscritos_no_notifica_a_nadie():
+    c = solicitada()
+    c.aprobar_cancelacion(ANTES)
+    assert c.pull_events()[0].socios_a_notificar == ()
+
+
+def test_rechazar_vuelve_a_programada_sin_avisar_a_los_socios():
+    c = solicitada()
+    r = c.reservar(ctx("A"))
+    c.pull_events()
+    c.rechazar_cancelacion()
+    assert c.estado == EstadoClase.PROGRAMADA and r.estado == EstadoReserva.CONFIRMADA
+    assert tipos(c) == [ev.CancelacionDeClaseRechazada]
+
+
+def test_mientras_se_resuelve_la_clase_sigue_abierta():
+    assert isinstance(solicitada().reservar(ctx("A")), Reserva)
+
+
+def test_clase_cancelada_no_acepta_reservas():
+    c = solicitada()
+    c.aprobar_cancelacion(ANTES)
+    with pytest.raises(ConflictoDeEstado) as e:
+        c.reservar(ctx("A"))
+    assert e.value.regla == "RN-30"
+
+
+def test_transiciones_invalidas_de_la_clase():
+    c = con_instructor()
+    with pytest.raises(TransicionInvalida):
+        c.aprobar_cancelacion(ANTES)
+    with pytest.raises(TransicionInvalida):
+        c.rechazar_cancelacion()
+    c = solicitada()
+    with pytest.raises(TransicionInvalida) as e:
+        c.solicitar_cancelacion("Ana", ANTES)
+    assert e.value.regla == "RN-29"
+    c.aprobar_cancelacion(ANTES)
+    with pytest.raises(TransicionInvalida) as e:
+        c.aprobar_cancelacion(ANTES)  # una solicitud no se resuelve dos veces
+    assert e.value.regla == "RN-30"
+
+
+def test_no_se_aprueba_con_la_clase_iniciada():
+    c = solicitada()
+    with pytest.raises(ConflictoDeEstado):
+        c.aprobar_cancelacion(INICIO)
+    assert c.estado == EstadoClase.CANCELACION_SOLICITADA

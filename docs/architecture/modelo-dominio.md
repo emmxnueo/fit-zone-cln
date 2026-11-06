@@ -10,8 +10,8 @@ El modelo se diseñó para todo FitZone en la Actividad 3 y se refinó para el P
 | Entidades | Socio, Membresía, Plan, Clase, Reserva, EntradaListaEspera, Instructor, Empleado, SolicitudExcepción | **Plan** (`entities.py`), **Reserva**, **EntradaListaEspera** (`clase.py`) |
 | Value Objects | NumeroSocio, DatosContacto, FechaNacimiento, Deslinde, Falta, Sanción, PeriodoVigencia, SaldoAFavor, Capacidad, Horario, EstadoReserva, PlazoConfirmacion, Rol, TipoExcepcion, EstadoClase | **Dinero**, **Cantidad**, **LineaSolicitud**, **Falta** (`value_objects.py`) |
 | Domain Services | ElegibilidadDeReserva, CalculoDeCambioDePlan | Las Specifications cumplen el papel de validar entre agregados (`specifications.py`) |
-| Domain Events | 22 eventos (13 con suscriptor automático), BRD sección 13 | 7 eventos de la membresía y 10 de reservas y sanciones (`events.py`) |
-| Máquina de estados | Membresía, Reserva, Clase, SolicitudExcepción | **Membresía** y **Reserva** (`state_machine.py`); los demás ciclos están en [ciclos-de-vida.md](ciclos-de-vida.md) |
+| Domain Events | 22 eventos (13 con suscriptor automático), BRD sección 13 | 7 eventos de la membresía y 13 de clases, reservas y sanciones (`events.py`) |
+| Máquina de estados | Membresía, Reserva, Clase, SolicitudExcepción | **Membresía**, **Reserva** y **Clase** (`state_machine.py`); los demás ciclos están en [ciclos-de-vida.md](ciclos-de-vida.md) |
 
 Lo que el sistema comunica (push y correo) no es un agregado: reacciona a los eventos de dominio (RN-34).
 
@@ -165,6 +165,8 @@ classDiagram
     +confirmar_oferta(clase_id, socio_id) Reserva
     +registrar_ingreso(socio_id) datetime
     +procesar_reloj(ahora) ResumenReloj
+    +solicitar_cancelacion(clase_id, instructor) Clase
+    +resolver_cancelacion(clase_id, aprobada) Clase
     +etiqueta(clase, socio_id) str
   }
   class Reloj {
@@ -180,6 +182,7 @@ classDiagram
     +capacidad: int
     +instructor: str
     +salon: str
+    +estado: EstadoClase
     +confirmadas() list
     +en_espera() list
     +oferta_activa() EntradaListaEspera
@@ -189,6 +192,9 @@ classDiagram
     +confirmar_oferta(ctx) Reserva
     +expirar_oferta(ahora)
     +aplicar_tolerancia(ahora, presentes, asignables)
+    +solicitar_cancelacion(instructor, ahora)
+    +aprobar_cancelacion(ahora)
+    +rechazar_cancelacion()
     +pull_events() list
   }
   class Reserva {
@@ -265,6 +271,13 @@ classDiagram
     OFERTADA
     ASIGNADA
     EXPIRADA
+    DESCARTADA
+  }
+  class EstadoClase {
+    <<enumeration>>
+    PROGRAMADA
+    CANCELACION_SOLICITADA
+    CANCELADA
   }
   class MotivoFalta {
     <<enumeration>>
@@ -278,6 +291,7 @@ classDiagram
   Clase "1" *-- "0..*" Reserva
   Clase "1" *-- "0..*" EntradaListaEspera
   Clase --> CategoriaClase
+  Clase --> EstadoClase
   Clase ..> ContextoReserva : evalúa
   Reserva --> EstadoReserva
   EntradaListaEspera --> EstadoEntrada
@@ -316,6 +330,9 @@ classDiagram
 | `OfertaDeLugarExpirada` | `Clase.expirar_oferta()` | RN-20 |
 | `FaltaRegistrada` | `Socio.registrar_falta()` | RN-25 |
 | `SancionAplicada` | `Socio.registrar_falta()` | RN-26 a RN-28 |
+| `CancelacionDeClaseSolicitada` | `Clase.solicitar_cancelacion()` | RN-29 |
+| `CancelacionDeClaseRechazada` | `Clase.rechazar_cancelacion()` | RN-30 |
+| `ClaseCancelada` | `Clase.aprobar_cancelacion()`; lleva los inscritos a notificar | RN-30, RN-31 |
 
 ## 3. Arquitectura por capas
 
@@ -384,6 +401,7 @@ erDiagram
   SOCIOS ||--o{ FALTAS : "acumula"
   SOCIOS ||--o| SANCIONES : "recibe"
   CLASES ||--o{ FALTAS : "origina"
+  CLASES ||--o| CANCELACIONES_CLASE : "tiene"
   SOCIOS { string id PK  string nombre  bool es_premium  bool activo  string ciudad }
   PLANES { string id PK  string descripcion  numeric precio  int cupo  bool habilitado  int duracion_meses }
   SOLICITUDES { string id PK  string socio_id FK  date fecha_solicitud  bool validada  bool cortesia_activa  string referencia  string estado }
@@ -394,6 +412,7 @@ erDiagram
   INGRESOS { int id PK  string socio_id FK  datetime momento }
   FALTAS { int id PK  string socio_id FK  string clase_id FK  datetime momento  string motivo  bool consumida }
   SANCIONES { string socio_id PK  datetime hasta }
+  CANCELACIONES_CLASE { string clase_id PK  string estado }
 ```
 
 El `precio_unitario` se guarda en la línea: el total de una solicitud no cambia si el plan cambia de precio después (RN-38).
