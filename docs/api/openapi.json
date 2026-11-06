@@ -1,0 +1,1233 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FitZone - Componentes de Lógica de Negocio",
+    "description": "API del PIA (Equipo 11, FIME-UANL): contratación de membresías de FitZone.\n\nCódigos HTTP: **201** al crear · **200** lecturas y cambios · **400** formato inválido · **404** no existe · **409** conflicto de estado, cupo o membresía activa · **422** regla de negocio violada.",
+    "version": "0.2.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "sistema"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/solicitudes": {
+      "post": {
+        "tags": [
+          "Solicitudes de membresía"
+        ],
+        "summary": "Crear una solicitud de membresía",
+        "description": "Crea la solicitud en estado SOLICITADA. Total = Σ precio × cantidad (RN-38).",
+        "operationId": "crear_solicitud_solicitudes_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitudIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Formato de la solicitud inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La solicitud, el socio o el plan no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regla de negocio violada (RN-xx)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Solicitudes de membresía"
+        ],
+        "summary": "Listar solicitudes",
+        "operationId": "listar_solicitudes_solicitudes_get",
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/EstadoMembresia"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Estado"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SolicitudOut"
+                  },
+                  "title": "Response Listar Solicitudes Solicitudes Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Formato de la solicitud inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/solicitudes/{solicitud_id}": {
+      "get": {
+        "tags": [
+          "Solicitudes de membresía"
+        ],
+        "summary": "Consultar una solicitud",
+        "operationId": "obtener_solicitud_solicitudes__solicitud_id__get",
+        "parameters": [
+          {
+            "name": "solicitud_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Solicitud Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La solicitud, el socio o el plan no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/solicitudes/{solicitud_id}/procesable": {
+      "get": {
+        "tags": [
+          "Solicitudes de membresía"
+        ],
+        "summary": "¿Es procesable? (RN-37)",
+        "operationId": "es_procesable_solicitudes__solicitud_id__procesable_get",
+        "parameters": [
+          {
+            "name": "solicitud_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Solicitud Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluacionOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La solicitud, el socio o el plan no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/solicitudes/{solicitud_id}/beneficio-referencia": {
+      "get": {
+        "tags": [
+          "Solicitudes de membresía"
+        ],
+        "summary": "¿Aplica el beneficio de referencia? (RN-40)",
+        "operationId": "beneficio_de_referencia_solicitudes__solicitud_id__beneficio_referencia_get",
+        "parameters": [
+          {
+            "name": "solicitud_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Solicitud Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluacionOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La solicitud, el socio o el plan no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/solicitudes/{solicitud_id}/activar": {
+      "post": {
+        "tags": [
+          "Solicitudes de membresía"
+        ],
+        "summary": "Activar (SOLICITADA → ACTIVA)",
+        "description": "Exige RN-37 (procesable), RN-38 (plan habilitado), RN-03 (una sola membresía activa) y RN-39 (cupo).",
+        "operationId": "activar_solicitudes__solicitud_id__activar_post",
+        "parameters": [
+          {
+            "name": "solicitud_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Solicitud Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La solicitud, el socio o el plan no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado, cupo o membresía activa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regla de negocio violada (RN-xx)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/solicitudes/{solicitud_id}/cancelar": {
+      "post": {
+        "tags": [
+          "Solicitudes de membresía"
+        ],
+        "summary": "Cancelar (SOLICITADA → CANCELADA)",
+        "operationId": "cancelar_solicitudes__solicitud_id__cancelar_post",
+        "parameters": [
+          {
+            "name": "solicitud_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Solicitud Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La solicitud, el socio o el plan no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado, cupo o membresía activa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/solicitudes/{solicitud_id}/congelar": {
+      "post": {
+        "tags": [
+          "Solicitudes de membresía"
+        ],
+        "summary": "Congelar (ACTIVA → SUSPENDIDA)",
+        "description": "Solo con solicitud aprobada por el Administrador (RN-09).",
+        "operationId": "congelar_solicitudes__solicitud_id__congelar_post",
+        "parameters": [
+          {
+            "name": "solicitud_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Solicitud Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Formato de la solicitud inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La solicitud, el socio o el plan no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado, cupo o membresía activa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regla de negocio violada (RN-xx)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/solicitudes/{solicitud_id}/descongelar": {
+      "post": {
+        "tags": [
+          "Solicitudes de membresía"
+        ],
+        "summary": "Descongelar (SUSPENDIDA → ACTIVA)",
+        "operationId": "descongelar_solicitudes__solicitud_id__descongelar_post",
+        "parameters": [
+          {
+            "name": "solicitud_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Solicitud Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La solicitud, el socio o el plan no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado, cupo o membresía activa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/solicitudes/{solicitud_id}/vencer": {
+      "post": {
+        "tags": [
+          "Solicitudes de membresía"
+        ],
+        "summary": "Vencer (ACTIVA o SUSPENDIDA → VENCIDA)",
+        "description": "Lo dispara el reloj del sistema al llegar la fecha de vencimiento (RN-04).",
+        "operationId": "vencer_solicitudes__solicitud_id__vencer_post",
+        "parameters": [
+          {
+            "name": "solicitud_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Solicitud Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La solicitud, el socio o el plan no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado, cupo o membresía activa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/solicitudes/{solicitud_id}/renovar": {
+      "post": {
+        "tags": [
+          "Solicitudes de membresía"
+        ],
+        "summary": "Renovar (VENCIDA → ACTIVA)",
+        "description": "Exige el pago confirmado (RN-08).",
+        "operationId": "renovar_solicitudes__solicitud_id__renovar_post",
+        "parameters": [
+          {
+            "name": "solicitud_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Solicitud Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PagoIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Formato de la solicitud inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La solicitud, el socio o el plan no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado, cupo o membresía activa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regla de negocio violada (RN-xx)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/solicitudes/{solicitud_id}/dar-de-baja": {
+      "post": {
+        "tags": [
+          "Solicitudes de membresía"
+        ],
+        "summary": "Dar de baja (ACTIVA o SUSPENDIDA → CANCELADA)",
+        "description": "Solo con solicitud aprobada por el Administrador (RN-10).",
+        "operationId": "dar_de_baja_solicitudes__solicitud_id__dar_de_baja_post",
+        "parameters": [
+          {
+            "name": "solicitud_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Solicitud Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Formato de la solicitud inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La solicitud, el socio o el plan no existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado, cupo o membresía activa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regla de negocio violada (RN-xx)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/planes": {
+      "get": {
+        "tags": [
+          "Catálogo y eventos"
+        ],
+        "summary": "Listar planes",
+        "operationId": "listar_planes_planes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PlanOut"
+                  },
+                  "type": "array",
+                  "title": "Response Listar Planes Planes Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/eventos": {
+      "get": {
+        "tags": [
+          "Catálogo y eventos"
+        ],
+        "summary": "Domain Events publicados (para la demostración)",
+        "operationId": "listar_eventos_eventos_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EventoOut"
+                  },
+                  "type": "array",
+                  "title": "Response Listar Eventos Eventos Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DecisionIn": {
+        "properties": {
+          "aprobada": {
+            "type": "boolean",
+            "title": "Aprobada",
+            "description": "Resolución del Administrador sobre la solicitud de excepción (RN-09, RN-10)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "aprobada"
+        ],
+        "title": "DecisionIn"
+      },
+      "ErrorOut": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "regla": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regla"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorOut"
+      },
+      "EstadoMembresia": {
+        "type": "string",
+        "enum": [
+          "SOLICITADA",
+          "ACTIVA",
+          "SUSPENDIDA",
+          "VENCIDA",
+          "CANCELADA"
+        ],
+        "title": "EstadoMembresia"
+      },
+      "EvaluacionOut": {
+        "properties": {
+          "cumple": {
+            "type": "boolean",
+            "title": "Cumple"
+          },
+          "motivos": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Motivos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cumple",
+          "motivos"
+        ],
+        "title": "EvaluacionOut"
+      },
+      "EventoOut": {
+        "properties": {
+          "evento": {
+            "type": "string",
+            "title": "Evento"
+          },
+          "solicitud_id": {
+            "type": "string",
+            "title": "Solicitud Id"
+          },
+          "socio_id": {
+            "type": "string",
+            "title": "Socio Id"
+          },
+          "ocurrido_en": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ocurrido En"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evento",
+          "solicitud_id",
+          "socio_id",
+          "ocurrido_en"
+        ],
+        "title": "EventoOut"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LineaIn": {
+        "properties": {
+          "plan_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Plan Id",
+            "examples": [
+              "FIT-P001"
+            ]
+          },
+          "cantidad": {
+            "type": "integer",
+            "title": "Cantidad",
+            "description": "Periodos contratados. Entero >= 1 (RN-38).",
+            "examples": [
+              3
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan_id",
+          "cantidad"
+        ],
+        "title": "LineaIn"
+      },
+      "LineaOut": {
+        "properties": {
+          "plan_id": {
+            "type": "string",
+            "title": "Plan Id"
+          },
+          "precio_unitario_mxn": {
+            "type": "string",
+            "title": "Precio Unitario Mxn"
+          },
+          "cantidad": {
+            "type": "integer",
+            "title": "Cantidad"
+          },
+          "subtotal_mxn": {
+            "type": "string",
+            "title": "Subtotal Mxn"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan_id",
+          "precio_unitario_mxn",
+          "cantidad",
+          "subtotal_mxn"
+        ],
+        "title": "LineaOut"
+      },
+      "PagoIn": {
+        "properties": {
+          "pago_confirmado": {
+            "type": "boolean",
+            "title": "Pago Confirmado",
+            "description": "Pago confirmado (RN-08)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "pago_confirmado"
+        ],
+        "title": "PagoIn"
+      },
+      "PlanOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "descripcion": {
+            "type": "string",
+            "title": "Descripcion"
+          },
+          "precio_mxn": {
+            "type": "string",
+            "title": "Precio Mxn"
+          },
+          "cupo": {
+            "type": "integer",
+            "title": "Cupo"
+          },
+          "habilitado": {
+            "type": "boolean",
+            "title": "Habilitado"
+          },
+          "duracion_meses": {
+            "type": "integer",
+            "title": "Duracion Meses"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "descripcion",
+          "precio_mxn",
+          "cupo",
+          "habilitado",
+          "duracion_meses"
+        ],
+        "title": "PlanOut"
+      },
+      "SolicitudIn": {
+        "properties": {
+          "socio_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Socio Id",
+            "examples": [
+              "FIT-C001"
+            ]
+          },
+          "lineas": {
+            "items": {
+              "$ref": "#/components/schemas/LineaIn"
+            },
+            "type": "array",
+            "title": "Lineas"
+          },
+          "validada": {
+            "type": "boolean",
+            "title": "Validada",
+            "description": "Validación registrada por Recepción o Administrador.",
+            "default": false
+          },
+          "cortesia_activa": {
+            "type": "boolean",
+            "title": "Cortesia Activa",
+            "description": "Cortesía vigente autorizada por el Administrador.",
+            "default": false
+          },
+          "referencia": {
+            "type": "string",
+            "title": "Referencia",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "socio_id"
+        ],
+        "title": "SolicitudIn"
+      },
+      "SolicitudOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "socio_id": {
+            "type": "string",
+            "title": "Socio Id"
+          },
+          "fecha_solicitud": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Solicitud"
+          },
+          "estado": {
+            "type": "string",
+            "title": "Estado"
+          },
+          "validada": {
+            "type": "boolean",
+            "title": "Validada"
+          },
+          "cortesia_activa": {
+            "type": "boolean",
+            "title": "Cortesia Activa"
+          },
+          "referencia": {
+            "type": "string",
+            "title": "Referencia"
+          },
+          "total_mxn": {
+            "type": "string",
+            "title": "Total Mxn"
+          },
+          "lineas": {
+            "items": {
+              "$ref": "#/components/schemas/LineaOut"
+            },
+            "type": "array",
+            "title": "Lineas"
+          },
+          "acciones_permitidas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Acciones Permitidas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "socio_id",
+          "fecha_solicitud",
+          "estado",
+          "validada",
+          "cortesia_activa",
+          "referencia",
+          "total_mxn",
+          "lineas",
+          "acciones_permitidas"
+        ],
+        "title": "SolicitudOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

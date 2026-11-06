@@ -69,6 +69,9 @@ class PublicadorEnMemoria:
     def suscribir(self, tipo: type, manejador: Callable[[EventoDeDominio], None]) -> None:
         self._suscriptores[tipo].append(manejador)
 
+    def listar(self) -> list[EventoDeDominio]:
+        return list(self.publicados)
+
     def publicar(self, eventos: list[EventoDeDominio]) -> None:
         for e in eventos:
             self.publicados.append(e)

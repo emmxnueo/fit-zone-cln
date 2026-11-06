@@ -6,8 +6,12 @@ publica los Domain Events. Las reglas viven en el dominio, no aquí (SRP).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
+from uuid import uuid4
 
+from src.domain.events import EventoDeDominio
 from src.domain.solicitud import SolicitudDeMembresia
+from src.domain.state_machine import EstadoMembresia
 from src.domain.specifications import (
     BeneficioDeReferencia,
     ContextoSolicitud,
@@ -81,7 +85,40 @@ class ServicioDeMembresias:
                 motivos.append("cortesia_activa")
         return Evaluacion(cumple, motivos)
 
+    def listar(self, estado: EstadoMembresia | None = None) -> list[SolicitudDeMembresia]:
+        todas = self.solicitudes.listar()
+        return [s for s in todas if estado is None or s.estado == estado]
+
+    def eventos(self) -> list[EventoDeDominio]:
+        return self.publicador.listar()
+
     # --- comandos -----------------------------------------------------------
+    def crear(
+        self,
+        socio_id: str,
+        lineas: list[tuple[str, int]],
+        validada: bool = False,
+        cortesia_activa: bool = False,
+        referencia: str = "",
+        fecha: date | None = None,
+    ) -> SolicitudDeMembresia:
+        """Crea una solicitud en estado SOLICITADA. La arma completa antes de
+        guardarla: si una línea es inválida (RN-38) no queda nada a medias."""
+        if self.socios.obtener(socio_id) is None:
+            raise NoEncontrado(f"El socio {socio_id} no existe")
+        solicitud = SolicitudDeMembresia(
+            id=f"SOL-{uuid4().hex[:8].upper()}", socio_id=socio_id,
+            fecha_solicitud=fecha or date.today(), validada=validada,
+            cortesia_activa=cortesia_activa, referencia=referencia,
+        )
+        for plan_id, cantidad in lineas:
+            plan = self.planes.obtener(plan_id)
+            if plan is None:
+                raise NoEncontrado(f"El plan {plan_id} no existe")
+            solicitud.agregar_linea(plan, cantidad)
+        self.solicitudes.guardar(solicitud)
+        return solicitud
+
     def activar(self, solicitud_id: str) -> SolicitudDeMembresia:
         return self._ejecutar(solicitud_id, lambda s: s.activar(self._contexto(s)))
 

@@ -11,22 +11,13 @@ from pathlib import Path
 from src.application.ejecutor_paquete import ejecutar_casos, ejecutar_transiciones
 from src.application.servicio import ServicioDeMembresias
 
-from .csv_loader import DATA_DIR, cargar_paquete, leer_csv
-from .memoria import (
-    PublicadorEnMemoria,
-    RepositorioPlanesMemoria,
-    RepositorioSociosMemoria,
-    RepositorioSolicitudesMemoria,
-)
+from .csv_loader import DATA_DIR, leer_csv
+from .composicion import crear_servicio_en_memoria
 
 
 def fabrica_servicio() -> ServicioDeMembresias:
     """Servicio con estado nuevo: recarga el paquete completo desde los CSV."""
-    p = cargar_paquete()
-    return ServicioDeMembresias(
-        RepositorioSociosMemoria(p.socios), RepositorioPlanesMemoria(p.planes),
-        RepositorioSolicitudesMemoria(p.solicitudes), PublicadorEnMemoria(),
-    )
+    return crear_servicio_en_memoria()
 
 
 def _escribir(ruta: Path, filas: list) -> None:

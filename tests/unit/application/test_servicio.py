@@ -122,3 +122,45 @@ def test_publicador_notifica_a_los_suscriptores():
     pub.suscribir(ev.MembresiaActivada, recibidos.append)
     svc.activar("O1")
     assert len(recibidos) == 1 and recibidos[0].solicitud_id == "O1"
+
+
+# --- crear / listar / eventos (API) ---------------------------------------
+def test_crear_solicitud_calcula_total_y_queda_solicitada():
+    svc, _ = armar()
+    s = svc.crear("S1", [("P1", 3)], validada=True, referencia="web")
+    assert s.estado == E.SOLICITADA and str(s.total.monto) == "1500.00"
+    assert svc.obtener(s.id) is s and s.id.startswith("SOL-")
+
+
+def test_crear_con_socio_inexistente_es_404():
+    svc, _ = armar()
+    with pytest.raises(NoEncontrado):
+        svc.crear("NOPE", [("P1", 1)])
+
+
+def test_crear_con_plan_inexistente_es_404_y_no_guarda_nada():
+    svc, _ = armar()
+    with pytest.raises(NoEncontrado):
+        svc.crear("S1", [("P1", 1), ("NOPE", 1)])
+    assert svc.listar() == []
+
+
+def test_crear_con_cantidad_invalida_es_422_y_no_guarda_nada():
+    svc, _ = armar()
+    with pytest.raises(ReglaDeNegocioViolada):
+        svc.crear("S1", [("P1", 0)])
+    assert svc.listar() == []
+
+
+def test_crear_sin_lineas_es_valido_pero_no_procesable():
+    svc, _ = armar()
+    s = svc.crear("S1", [], validada=True)
+    assert svc.evaluar_procesable(s.id).motivos == ["sin_lineas"]
+
+
+def test_listar_filtra_por_estado_y_eventos_se_exponen():
+    svc, _ = armar(solicitudes=[("O1", "S1", 1), ("O2", "S1", 1)])
+    svc.cancelar("O2")
+    assert [s.id for s in svc.listar(E.CANCELADA)] == ["O2"]
+    assert len(svc.listar()) == 2
+    assert [e.nombre for e in svc.eventos()] == ["SolicitudCancelada"]
