@@ -37,13 +37,12 @@ def _salida(svc: ServicioDeClases, clase, socio_id: str | None = None) -> ClaseO
 
 
 @router.post("", response_model=ClaseOut, status_code=201, summary="Crear una clase",
-             description="Inicio futuro, instructor obligatorio y capacidad de 1 a 100 lugares. "
-                         "Regla: RN-11.",
+             description="Inicio futuro e instructor obligatorio. La capacidad la fija el salón "
+                         "elegido (consulta GET /salones). Regla: RN-11.",
              responses={**_400, **_422})
 def crear_clase(datos: ClaseIn, svc: Servicio):
     return _salida(svc, svc.crear_clase(
-        datos.nombre, datos.categoria, datos.inicio, datos.capacidad,
-        instructor=datos.instructor, salon=datos.salon,
+        datos.nombre, datos.categoria, datos.inicio, datos.salon, instructor=datos.instructor,
     ))
 
 

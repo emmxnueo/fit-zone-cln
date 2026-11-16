@@ -13,6 +13,7 @@ from src.domain import events as ev
 from src.domain.clase import Clase, EntradaListaEspera, Reserva
 from src.domain.entities import Socio
 from src.domain.errors import ReglaDeNegocioViolada
+from src.domain.salones import salon as salon_del_catalogo
 from src.domain.specifications import (
     CategoriaClase,
     ContextoReserva,
@@ -99,14 +100,16 @@ class ServicioDeClases:
 
     # --- comandos -----------------------------------------------------------
     def crear_clase(
-        self, nombre: str, categoria: CategoriaClase, inicio: datetime, capacidad: int,
-        instructor: str = "", salon: str = "",
+        self, nombre: str, categoria: CategoriaClase, inicio: datetime, salon: str,
+        instructor: str = "",
     ) -> Clase:
+        """RN-11: la capacidad la fija el salón, no quien crea la clase."""
         if inicio <= self.reloj.ahora():
             raise ReglaDeNegocioViolada("La clase debe programarse en una fecha y hora futuras")
+        lugar = salon_del_catalogo(salon)
         clase = Clase(
-            f"CLA-{uuid4().hex[:8].upper()}", nombre, categoria, inicio, capacidad,
-            instructor=instructor, salon=salon,
+            f"CLA-{uuid4().hex[:8].upper()}", nombre, categoria, inicio, lugar.capacidad,
+            instructor=instructor, salon=lugar.nombre,
         )
         self.clases.guardar(clase)
         return clase

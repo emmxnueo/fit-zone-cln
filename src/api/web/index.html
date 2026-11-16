@@ -399,10 +399,9 @@ async function instructorClases() {
 
 // --- administrador ----------------------------------------------------------
 async function adminClases() {
-  const clases = await api("GET", "/clases");
+  const [clases, salones] = await Promise.all([api("GET", "/clases"), api("GET", "/salones")]);
   const crear = (d) => api("POST", "/clases", {
-    nombre: d.nombre, categoria: d.categoria, inicio: d.inicio, capacidad: Number(d.capacidad),
-    instructor: d.instructor, salon: d.salon,
+    nombre: d.nombre, categoria: d.categoria, inicio: d.inicio, instructor: d.instructor, salon: d.salon,
   });
   return [
     el("h2", {}, "Clases"),
@@ -413,18 +412,16 @@ async function adminClases() {
       })),
       selector("categoria", "Categoría", [["ESTANDAR", "Estándar"], ["PREMIUM", "Premium"]]),
       el("label", {}, "Inicio", el("input", { name: "inicio", type: "datetime-local", required: true, min: ahoraLocal() })),
-      el("label", {}, "Capacidad", el("input", { name: "capacidad", type: "number", min: "1", max: "100", value: "10", required: true })),
       el("label", {}, "Instructor", el("input", {
         name: "instructor", required: true, minlength: "2", maxlength: "80",
         pattern: "[A-Za-zÁÉÍÓÚÜÑáéíóúüñ '.\\-]+", title: "Solo letras, espacios, punto o guion",
       })),
-      el("label", {}, "Salón", el("input", {
-        name: "salon", maxlength: "40",
-        pattern: "[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 '.&\\-]+", title: "Letras, números, espacios, punto o guion",
-      })),
+      selector("salon", "Salón (fija la capacidad)",
+        salones.map((s) => [s.nombre, `${s.nombre}: ${s.capacidad} ${s.capacidad === 1 ? "lugar" : "lugares"}`])),
       el("button", { type: "submit" }, "Crear clase")),
-    tabla(["Clase", "Inicio", "Instructor", "Categoría", "Libres#", "Estado"],
-      clases.map((c) => [c.nombre, fecha(c.inicio), c.instructor, texto(c.categoria), c.lugares_libres,
+    tabla(["Clase", "Inicio", "Instructor", "Salón", "Categoría", "Libres#", "Estado"],
+      clases.map((c) => [c.nombre, fecha(c.inicio), c.instructor, c.salon.replaceAll(" ", "\u00a0"), texto(c.categoria),
+        `${c.lugares_libres}\u00a0de\u00a0${c.capacidad}`,
         c.ya_inicio && c.estado === "PROGRAMADA" ? "Ya inició" : texto(c.estado)]),
       "No hay clases."),
   ];

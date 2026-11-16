@@ -800,7 +800,7 @@
           "Clases y reservas"
         ],
         "summary": "Crear una clase",
-        "description": "Inicio futuro, instructor obligatorio y capacidad de 1 a 100 lugares. Regla: RN-11.",
+        "description": "Inicio futuro e instructor obligatorio. La capacidad la fija el salón elegido (consulta GET /salones). Regla: RN-11.",
         "operationId": "crear_clase_clases_post",
         "requestBody": {
           "required": true,
@@ -1669,6 +1669,32 @@
         }
       }
     },
+    "/salones": {
+      "get": {
+        "tags": [
+          "Planes y eventos"
+        ],
+        "summary": "Ver los salones y su capacidad",
+        "description": "La capacidad de cada clase es la de su salón. Regla: RN-11.",
+        "operationId": "listar_salones_salones_get",
+        "responses": {
+          "200": {
+            "description": "Operación correcta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SalonOut"
+                  },
+                  "type": "array",
+                  "title": "Response Listar Salones Salones Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/planes": {
       "get": {
         "tags": [
@@ -1817,14 +1843,6 @@
               "2026-12-01T18:00:00"
             ]
           },
-          "capacidad": {
-            "type": "integer",
-            "title": "Capacidad",
-            "description": "Lugares disponibles, de 1 a 100.",
-            "examples": [
-              20
-            ]
-          },
           "instructor": {
             "type": "string",
             "maxLength": 80,
@@ -1836,12 +1854,15 @@
           },
           "salon": {
             "type": "string",
-            "maxLength": 40,
+            "enum": [
+              "Salón 1",
+              "Salón 2",
+              "Salón 3"
+            ],
             "title": "Salon",
-            "description": "Dónde se imparte.",
-            "default": "",
+            "description": "Dónde se imparte. Fija la capacidad (RN-11): Salón 1, 1 lugar; Salón 2, 5 lugares; Salón 3, 10 lugares.",
             "examples": [
-              "Salón 1"
+              "Salón 2"
             ]
           }
         },
@@ -1850,8 +1871,8 @@
           "nombre",
           "categoria",
           "inicio",
-          "capacidad",
-          "instructor"
+          "instructor",
+          "salon"
         ],
         "title": "ClaseIn"
       },
@@ -2448,6 +2469,24 @@
         ],
         "title": "ResumenRelojOut"
       },
+      "SalonOut": {
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "title": "Nombre"
+          },
+          "capacidad": {
+            "type": "integer",
+            "title": "Capacidad"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nombre",
+          "capacidad"
+        ],
+        "title": "SalonOut"
+      },
       "SocioIn": {
         "properties": {
           "socio_id": {
@@ -2654,7 +2693,7 @@
     },
     {
       "name": "Planes y eventos",
-      "description": "Planes disponibles y eventos del sistema."
+      "description": "Planes, salones y eventos del sistema."
     },
     {
       "name": "Sistema",

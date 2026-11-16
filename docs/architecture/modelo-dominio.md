@@ -8,7 +8,7 @@ El modelo se diseñó para todo FitZone en la Actividad 3 y se refinó para el P
 |---|---|---|
 | Aggregates | Socio, Membresía, Plan, Clase, Instructor, Empleado, SolicitudExcepción | **SolicitudDeMembresia** (`solicitud.py`), **Clase** (`clase.py`), **Socio** (`entities.py`) |
 | Entidades | Socio, Membresía, Plan, Clase, Reserva, EntradaListaEspera, Instructor, Empleado, SolicitudExcepción | **Plan** (`entities.py`), **Reserva**, **EntradaListaEspera** (`clase.py`) |
-| Value Objects | NumeroSocio, DatosContacto, FechaNacimiento, Deslinde, Falta, Sanción, PeriodoVigencia, SaldoAFavor, Capacidad, Horario, EstadoReserva, PlazoConfirmacion, Rol, TipoExcepcion, EstadoClase | **Dinero**, **Cantidad**, **LineaSolicitud**, **Falta** (`value_objects.py`) |
+| Value Objects | NumeroSocio, DatosContacto, FechaNacimiento, Deslinde, Falta, Sanción, PeriodoVigencia, SaldoAFavor, Capacidad, Horario, EstadoReserva, PlazoConfirmacion, Rol, TipoExcepcion, EstadoClase | **Dinero**, **Cantidad**, **LineaSolicitud**, **Falta** (`value_objects.py`); **Salon** (`salones.py`, catálogo fijo de RN-11) |
 | Domain Services | ElegibilidadDeReserva, CalculoDeCambioDePlan | Las Specifications cumplen el papel de validar entre agregados (`specifications.py`) |
 | Domain Events | 22 eventos (13 con suscriptor automático), BRD sección 13 | 7 eventos de la membresía y 13 de clases, reservas y sanciones (`events.py`) |
 | Máquina de estados | Membresía, Reserva, Clase, SolicitudExcepción | **Membresía**, **Reserva** y **Clase** (`state_machine.py`); los demás ciclos están en [ciclos-de-vida.md](ciclos-de-vida.md) |
@@ -173,6 +173,11 @@ classDiagram
     <<Port>>
     +ahora() datetime
   }
+  class Salon {
+    <<Value Object>>
+    +nombre: str
+    +capacidad: int
+  }
   class Clase {
     <<Aggregate Root>>
     +id: str
@@ -291,6 +296,7 @@ classDiagram
   Clase "1" *-- "0..*" Reserva
   Clase "1" *-- "0..*" EntradaListaEspera
   Clase --> CategoriaClase
+  Clase ..> Salon : capacidad fija (RN-11)
   Clase --> EstadoClase
   Clase ..> ContextoReserva : evalúa
   Reserva --> EstadoReserva

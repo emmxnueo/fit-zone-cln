@@ -2,6 +2,7 @@
 decimal ("1500.00") para no perder precisión con float."""
 import re
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field, NaiveDatetime, StrictBool, StrictInt, field_validator
 from pydantic_core import PydanticCustomError
@@ -48,7 +49,6 @@ class PagoIn(BaseModel):
 _LETRA = "A-Za-zÁÉÍÓÚÜÑáéíóúüñ"
 _NOMBRE_CLASE = re.compile(rf"[{_LETRA}0-9]+(?:[ '.&-][{_LETRA}0-9]+)*")
 _NOMBRE_PERSONA = re.compile(rf"[{_LETRA}]+(?:[ '.-][{_LETRA}]+)*\.?")
-CAPACIDAD_MAXIMA = 100
 
 
 def _formato(mensaje: str) -> PydanticCustomError:
@@ -72,12 +72,14 @@ class ClaseIn(BaseModel):
     inicio: NaiveDatetime = Field(
         examples=["2026-12-01T18:00:00"], description="Fecha y hora de Monterrey; debe ser futura."
     )
-    capacidad: StrictInt = Field(examples=[20],
-                                 description=f"Lugares disponibles, de 1 a {CAPACIDAD_MAXIMA}.")
     instructor: str = Field(max_length=80, examples=["Ana Ruiz"],
                             description="Quien imparte la clase. Obligatorio: solo él puede pedir "
                                         "cancelarla (RN-29).")
-    salon: str = Field(default="", max_length=40, examples=["Salón 1"], description="Dónde se imparte.")
+    salon: Literal["Salón 1", "Salón 2", "Salón 3"] = Field(
+        examples=["Salón 2"],
+        description="Dónde se imparte. Fija la capacidad (RN-11): Salón 1, 1 lugar; "
+                    "Salón 2, 5 lugares; Salón 3, 10 lugares.",
+    )
 
     @field_validator("nombre")
     @classmethod
@@ -90,21 +92,6 @@ class ClaseIn(BaseModel):
     def _instructor(cls, valor: str) -> str:
         return _texto(valor, _NOMBRE_PERSONA, 2,
                       "El instructor es obligatorio y solo puede tener letras, espacios, punto o guion")
-
-    @field_validator("salon")
-    @classmethod
-    def _salon(cls, valor: str) -> str:
-        if not valor.strip():
-            return ""
-        return _texto(valor, _NOMBRE_CLASE, 1,
-                      "El salón solo puede tener letras, números, espacios, punto o guion")
-
-    @field_validator("capacidad")
-    @classmethod
-    def _capacidad(cls, valor: int) -> int:
-        if valor > CAPACIDAD_MAXIMA:  # el mínimo lo exige el dominio (RN-11, 422)
-            raise _formato(f"La capacidad no puede ser mayor a {CAPACIDAD_MAXIMA}")
-        return valor
 
 
 class SocioIn(BaseModel):
@@ -149,6 +136,11 @@ class SolicitudOut(BaseModel):
 class EvaluacionOut(BaseModel):
     cumple: bool
     motivos: list[str]
+
+
+class SalonOut(BaseModel):
+    nombre: str
+    capacidad: int
 
 
 class PlanOut(BaseModel):

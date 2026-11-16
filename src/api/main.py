@@ -42,7 +42,7 @@ _SECCIONES = [
     {"name": "Clases y reservas", "description": "Catálogo, reservas y lista de espera."},
     {"name": "Socios", "description": "Faltas, sanciones y entradas al gimnasio."},
     {"name": "Reportes", "description": "Afluencia y demanda de clases."},
-    {"name": "Planes y eventos", "description": "Planes disponibles y eventos del sistema."},
+    {"name": "Planes y eventos", "description": "Planes, salones y eventos del sistema."},
     {"name": "Sistema", "description": "Estado del servicio."},
 ]
 

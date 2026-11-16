@@ -51,7 +51,7 @@ def entorno(url):
 
 def test_lista_y_oferta_sobreviven_a_la_persistencia(entorno):
     s, (t, a, b), reloj = entorno
-    c = s.clases.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO, 1, "Ana", "Salón 1")
+    c = s.clases.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO, "Salón 1", "Ana")
     r = s.clases.reservar(c.id, t)
     s.clases.reservar(c.id, a)
     s.clases.reservar(c.id, b)
@@ -71,7 +71,7 @@ def test_lista_y_oferta_sobreviven_a_la_persistencia(entorno):
 def test_no_show_falta_sancion_e_ingresos_persisten(entorno):
     s, (t, a, _), reloj = entorno
     for dia in range(3):
-        c = s.clases.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO + timedelta(days=dia), 1)
+        c = s.clases.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO + timedelta(days=dia), "Salón 1")
         reloj.fijar(c.inicio - timedelta(hours=2))
         s.clases.reservar(c.id, t)
         s.clases.reservar(c.id, a)
@@ -97,7 +97,7 @@ def test_reloj_del_sistema_no_tiene_zona():
 
 def test_reportes_leen_lo_persistido(entorno):
     s, (t, a, _), reloj = entorno
-    c = s.clases.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO, 1)
+    c = s.clases.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO, "Salón 1")
     s.clases.reservar(c.id, t)
     s.clases.reservar(c.id, a)
     s.clases.registrar_ingreso(t)  # hoy, un día antes de la clase
@@ -111,7 +111,7 @@ def test_reportes_leen_lo_persistido(entorno):
 
 def test_ciclo_de_cancelacion_persiste(entorno):
     s, (t, a, _), _ = entorno
-    c = s.clases.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO, 1, "Ana")
+    c = s.clases.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO, "Salón 1", "Ana")
     s.clases.reservar(c.id, t)
     s.clases.reservar(c.id, a)
     s.clases.solicitar_cancelacion(c.id, "Ana")
@@ -128,7 +128,7 @@ def test_ciclo_de_cancelacion_persiste(entorno):
 def test_listar_socios_incluye_faltas_y_sancion(entorno):
     s, (t, _, _), reloj = entorno
     for dia in range(3):
-        c = s.clases.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO + timedelta(days=dia), 1)
+        c = s.clases.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO + timedelta(days=dia), "Salón 1")
         reloj.fijar(c.inicio - timedelta(hours=2))
         s.clases.reservar(c.id, t)
         s.clases.procesar_reloj(c.inicio + timedelta(minutes=11))

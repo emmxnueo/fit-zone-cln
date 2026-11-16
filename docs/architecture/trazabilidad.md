@@ -15,6 +15,7 @@ Recorre el camino **necesidad (BN) → historia (US) y Gherkin → regla (RN) �
 | `A/servicio` | `tests/unit/application/test_servicio.py` |
 | `I/sql` | `tests/unit/infrastructure/test_repositorios_sql.py` |
 | `D/clase` | `tests/unit/domain/test_clase.py` |
+| `D/salones` | `tests/unit/domain/test_salones.py` |
 | `D/faltas` | `tests/unit/domain/test_socio_faltas.py` |
 | `A/clases` | `tests/unit/application/test_clases.py` |
 | `I/clases` | `tests/unit/infrastructure/test_clases_sql.py` (SQLite y PostgreSQL) |
@@ -33,7 +34,7 @@ Recorre el camino **necesidad (BN) → historia (US) y Gherkin → regla (RN) �
 | **RN-08** renovar con pago confirmado (422) | US-16 | `SolicitudDeMembresia.renovar`; `POST /solicitudes/{id}/renovar`; `MembresiaRenovada` | `D/solicitud::test_vencer_desde_activa_y_renovar`; `A/servicio::test_ciclo_completo_congelar_vencer_renovar_baja`; `API::test_vencer_renovar_y_rn08` | Implementada |
 | **RN-09** congelar con aprobación del Administrador (422) | US-17 | `SolicitudDeMembresia.congelar`; `POST .../congelar`; `MembresiaCongelada` | `D/solicitud::test_congelar_exige_aprobacion_del_administrador`; `API::test_congelar_descongelar_y_rn09` | Parcial: la aprobación llega como el campo `aprobada`; el agregado `SolicitudExcepcion` no se programó |
 | **RN-10** baja con aprobación del Administrador (422) | US-12, US-17 | `SolicitudDeMembresia.dar_de_baja`; `POST .../dar-de-baja`; `MembresiaDadaDeBaja` | `D/solicitud::test_baja_exige_aprobacion_y_es_final`; `API::test_baja_requiere_administrador_rn10` | Parcial: igual que RN-09 |
-| **RN-11** capacidad (422) | US-01 | `Clase.lugares_libres`, `Clase.reservar` | `D/clase::test_capacidad_debe_ser_positiva`, `test_clase_llena_manda_a_lista_de_espera` | Implementada |
+| **RN-11** capacidad fija por salón (422) | US-01 | `SALONES` (`salones.py`: Salón 1, 1 lugar; Salón 2, 5; Salón 3, 10); `ServicioDeClases.crear_clase` toma la capacidad del salón; `Clase.lugares_libres`, `Clase.reservar`; `GET /salones` | `D/salones::test_tres_salones_con_capacidad_1_5_y_10`, `test_salon_inexistente_es_422_rn11`; `D/clase::test_capacidad_debe_ser_positiva`, `test_clase_llena_manda_a_lista_de_espera`; `API/clases::test_la_capacidad_la_fija_el_salon` | Implementada |
 | **RN-13** elegibilidad para reservar (422) | US-01 | `ElegibleParaReservar`, `exigir_elegibilidad`; `POST /clases/{id}/reservas` | `D/clase::test_socio_no_elegible_se_rechaza`; `API/clases::test_sin_membresia_es_422_y_sin_socio_es_404` | Implementada |
 | **RN-14** categorías y etiquetas | US-10 | `PlanIncluyeCategoria`; `ServicioDeClases.etiqueta`; `GET /clases?socio_id=` | `A/clases::test_etiqueta_segun_el_plan`; `API/clases::test_clase_premium_y_etiquetas` | Parcial: un socio Standard no puede reservar una clase Premium; no se cobra el costo adicional |
 | **RN-15, RN-16** cancelación según anticipación | US-14 | `Clase.cancelar_reserva`; `TRANSICIONES_RESERVA` | `D/clase::test_cancelacion_segun_anticipacion`; `A/clases::test_cancelacion_tardia_registra_falta_en_el_socio` | Implementada |
@@ -92,7 +93,7 @@ Recorre el camino **necesidad (BN) → historia (US) y Gherkin → regla (RN) �
 | `POST /solicitudes/{id}/vencer` | ACTIVA o SUSPENDIDA → VENCIDA | RN-04, RN-41 | 200, 404, 409 | `API::test_vencer_renovar_y_rn08` |
 | `POST /solicitudes/{id}/renovar` | VENCIDA → ACTIVA | RN-08, RN-41 | 200, 400, 404, 409, 422 | `API::test_vencer_renovar_y_rn08` |
 | `POST /solicitudes/{id}/dar-de-baja` | ACTIVA o SUSPENDIDA → CANCELADA | RN-10, RN-41 | 200, 400, 404, 409, 422 | `API::test_baja_requiere_administrador_rn10` |
-| `POST /clases`, `GET /clases`, `GET /clases/{id}` | Crear (inicio futuro, instructor obligatorio, capacidad de 1 a 100), catálogo y consulta (`ya_inicio`) | RN-11, RN-13, RN-14 | 200, 201, 400, 404, 422 | `API/clases::test_formato_y_reglas_al_crear_clase`, `test_clase_premium_y_etiquetas`, `test_no_se_crean_clases_en_el_pasado`, `test_formato_de_la_clase_es_400`, `test_ya_inicio_se_calcula_con_el_reloj_del_negocio`, `test_sin_membresia_la_etiqueta_no_dice_incluida` |
+| `POST /clases`, `GET /clases`, `GET /clases/{id}` | Crear (inicio futuro, instructor obligatorio, capacidad del salón), catálogo y consulta (`ya_inicio`) | RN-11, RN-13, RN-14 | 200, 201, 400, 404, 422 | `API/clases::test_formato_y_reglas_al_crear_clase`, `test_clase_premium_y_etiquetas`, `test_no_se_crean_clases_en_el_pasado`, `test_formato_de_la_clase_es_400`, `test_ya_inicio_se_calcula_con_el_reloj_del_negocio`, `test_sin_membresia_la_etiqueta_no_dice_incluida` |
 | `POST /clases/{id}/reservas` | Reservar o entrar a la lista | RN-11, RN-13, RN-19, RN-24, RN-26 | 201, 400, 404, 409, 422 | `API/clases::test_reservar_y_lista_de_espera` |
 | `POST /clases/{id}/reservas/{rid}/cancelar` | Cancelar | RN-15, RN-16, RN-20 | 200, 404, 409 | `API/clases::test_cancelar_ofrecer_y_confirmar` |
 | `POST /clases/{id}/oferta/confirmar` | Confirmar oferta | RN-20, RN-13 | 200, 400, 404, 409, 422 | `API/clases::test_cancelar_ofrecer_y_confirmar` |
@@ -102,6 +103,7 @@ Recorre el camino **necesidad (BN) → historia (US) y Gherkin → regla (RN) �
 | `GET /reportes/afluencia` | Afluencia por hora y día | RN-35 | 200, 400, 422 | `API/clases::test_reporte_de_afluencia`, `test_reporte_de_afluencia_con_rango_invalido` |
 | `GET /reportes/demanda` | Ocupación y lista de espera | RN-36 | 200 | `API/clases::test_reporte_de_demanda` |
 | `GET /socios/{id}`, `POST /socios/{id}/ingresos` | Faltas, sanción e ingreso | RN-05, RN-18, RN-26 | 200, 201, 404, 422 | `API/clases::test_ingreso_sin_membresia_es_422` |
+| `GET /salones` | Salones y su capacidad | RN-11 | 200 | `API/clases::test_la_capacidad_la_fija_el_salon` |
 | `GET /planes`, `GET /eventos`, `GET /health` | Catálogo, eventos y estado | | 200 | `API::test_catalogo_de_planes`, `test_health` |
 
 ## 5. Evidencia del paquete del profesor
