@@ -842,6 +842,16 @@ El BPMN está dibujado en draw.io con carriles (swimlanes) por actor: Socio, Rec
 | Rombo pequeño | Unión de caminos |
 | Texto entre paréntesis con `RN-xx` | Regla de negocio aplicada (ver sección 7) |
 | Nombre en PascalCase (`ReservaConfirmada`) | Domain Event emitido por la tarea |
+| Rectángulo redondeado con **[+]** | Subproceso colapsado: su detalle está en el BPMN del mismo número (solo en la vista general) |
+| Cilindro | Almacén de datos (solo en la vista general) |
+
+### 12.0 Vista general
+
+Un solo diagrama con los seis procesos como subprocesos y los carriles de todos los actores. El flujo principal va de la membresía a la clase: alta (12.1), reserva (12.2), ingreso en Recepción y tolerancia o cancelación (12.3). La cancelación de clases (12.4), las excepciones (12.5) y los reportes (12.6) inician por su cuenta; los reportes leen las reservas, los ingresos y las faltas que dejan los demás procesos.
+
+![Diagrama BPMN: vista general de los procesos de FitZone](bpmn/12-0-vista-general.png)
+
+El diagrama se genera desde `bpmn/12-0-vista-general.svg`, que se puede abrir y editar como imagen vectorial.
 
 ### 12.1 Alta y vigencia de membresía
 

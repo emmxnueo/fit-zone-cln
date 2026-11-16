@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1130" viewBox="0 0 1900 1130" font-family="Helvetica, Arial, sans-serif">
+<defs><marker id="punta" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#1f2421"/></marker><marker id="abierta" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10" fill="none" stroke="#1f2421" stroke-width="1.4"/></marker></defs>
+<rect width="1900" height="1130" fill="#f5f5f5"/>
+<rect x="6" y="6" width="368" height="1118" fill="#f5f5f5" stroke="#6c8ebf" stroke-width="1.5"/>
+<rect x="6" y="6" width="368" height="44" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="190" y="28" font-size="24" text-anchor="middle" dominant-baseline="middle" font-weight="bold" font-style="normal" fill="#1f2421">Socio</text>
+<rect x="386" y="6" width="368" height="1118" fill="#f5f5f5" stroke="#9673a6" stroke-width="1.5"/>
+<rect x="386" y="6" width="368" height="44" fill="#e1d5e7" stroke="#9673a6" stroke-width="1.5"/>
+<text x="570" y="28" font-size="24" text-anchor="middle" dominant-baseline="middle" font-weight="bold" font-style="normal" fill="#1f2421">Recepción</text>
+<rect x="766" y="6" width="368" height="1118" fill="#f5f5f5" stroke="#82b366" stroke-width="1.5"/>
+<rect x="766" y="6" width="368" height="44" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
+<text x="950" y="28" font-size="24" text-anchor="middle" dominant-baseline="middle" font-weight="bold" font-style="normal" fill="#1f2421">Sistema</text>
+<rect x="1146" y="6" width="368" height="1118" fill="#f5f5f5" stroke="#d6b656" stroke-width="1.5"/>
+<rect x="1146" y="6" width="368" height="44" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5"/>
+<text x="1330" y="28" font-size="24" text-anchor="middle" dominant-baseline="middle" font-weight="bold" font-style="normal" fill="#1f2421">Instructor</text>
+<rect x="1526" y="6" width="368" height="1118" fill="#f5f5f5" stroke="#d79b00" stroke-width="1.5"/>
+<rect x="1526" y="6" width="368" height="44" fill="#ffe6cc" stroke="#d79b00" stroke-width="1.5"/>
+<text x="1710" y="28" font-size="24" text-anchor="middle" dominant-baseline="middle" font-weight="bold" font-style="normal" fill="#1f2421">Administrador</text>
+<circle cx="190" cy="118" r="15" fill="#1f2421"/>
+<text x="190" y="86" font-size="13" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="italic" fill="#4a4f4c">Quiere entrenar en FitZone</text>
+<rect x="420" y="158" width="300" height="104" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>
+<text x="570" y="176" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold" font-style="normal" fill="#1d5632">12.1</text>
+<text x="570" y="199" font-size="15" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">Alta y vigencia</text>
+<text x="570" y="217" font-size="15" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">de la membresía</text>
+<text x="570" y="232" font-size="12" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#4a4f4c">RN-01 a RN-05, RN-08, RN-37 a RN-41</text>
+<rect x="561" y="242" width="18" height="18" fill="#fff" stroke="#6c8ebf" stroke-width="1.5"/>
+<path d="M565 251 H575 M570 246 V256" stroke="#1f2421" stroke-width="1.8"/>
+<path d="M190 133 L190 210 L420 210" fill="none" stroke="#1f2421" stroke-width="1.6"  marker-end="url(#punta)"/>
+<polygon points="825.0,300 851.0,271.0 1049.0,271.0 1075.0,300 1049.0,329.0 851.0,329.0" fill="#e8eef8" stroke="#3f6fd8" stroke-width="1.6"/>
+<text x="950" y="291" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">¿Membresía</text>
+<text x="950" y="309" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">ACTIVA?</text>
+<path d="M720 210 L950 210 L950 271" fill="none" stroke="#1f2421" stroke-width="1.6"  marker-end="url(#punta)"/>
+<rect x="810" y="389" width="280" height="62" fill="#e3e6e8" stroke="#8a9096" stroke-width="1.2"/>
+<text x="950" y="411" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">Sin acceso ni reservas</text>
+<text x="950" y="429" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">(RN-05, RN-13 - 422)</text>
+<path d="M950 329 L950 389" fill="none" stroke="#1f2421" stroke-width="1.6"  marker-end="url(#punta)"/>
+<text x="962" y="347" font-size="14" text-anchor="start" dominant-baseline="middle" font-weight="bold" font-style="normal" fill="#1f2421">No</text>
+<circle cx="950" cy="500" r="16" fill="#fff" stroke="#1f2421" stroke-width="3"/>
+<circle cx="950" cy="500" r="10" fill="#fff" stroke="#1f2421" stroke-width="1.5"/>
+<path d="M950 451 L950 484" fill="none" stroke="#1f2421" stroke-width="1.6"  marker-end="url(#punta)"/>
+<rect x="40" y="368" width="300" height="104" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>
+<text x="190" y="386" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold" font-style="normal" fill="#1d5632">12.2</text>
+<text x="190" y="409" font-size="15" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">Reserva de clase y</text>
+<text x="190" y="427" font-size="15" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">lista de espera</text>
+<text x="190" y="442" font-size="12" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#4a4f4c">RN-11, RN-13, RN-19 a RN-24</text>
+<rect x="181" y="452" width="18" height="18" fill="#fff" stroke="#6c8ebf" stroke-width="1.5"/>
+<path d="M185 461 H195 M190 456 V466" stroke="#1f2421" stroke-width="1.8"/>
+<path d="M825 300 L190 300 L190 368" fill="none" stroke="#1f2421" stroke-width="1.6"  marker-end="url(#punta)"/>
+<text x="811" y="286" font-size="14" text-anchor="end" dominant-baseline="middle" font-weight="bold" font-style="normal" fill="#1f2421">Sí</text>
+<rect x="430" y="565" width="280" height="70" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="570" y="591" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">Registrar el ingreso al llegar</text>
+<text x="570" y="609" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">(RN-05; cuenta como presente, RN-18)</text>
+<path d="M190 472 L190 600 L430 600" fill="none" stroke="#1f2421" stroke-width="1.6"  marker-end="url(#punta)"/>
+<rect x="800" y="678" width="300" height="104" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>
+<text x="950" y="696" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold" font-style="normal" fill="#1d5632">12.3</text>
+<text x="950" y="719" font-size="15" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">Cancelación de reserva,</text>
+<text x="950" y="737" font-size="15" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">tolerancia y no-show</text>
+<text x="950" y="752" font-size="12" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#4a4f4c">RN-15 a RN-18, RN-21, RN-23, RN-25 a RN-28</text>
+<rect x="941" y="762" width="18" height="18" fill="#fff" stroke="#6c8ebf" stroke-width="1.5"/>
+<path d="M945 771 H955 M950 766 V776" stroke="#1f2421" stroke-width="1.8"/>
+<path d="M710 600 L910 600 L910 678" fill="none" stroke="#1f2421" stroke-width="1.6"  marker-end="url(#punta)"/>
+<path d="M340 440 L785 440 L785 730 L800 730" fill="none" stroke="#1f2421" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#abierta)"/>
+<text x="775" y="512" font-size="12" text-anchor="end" dominant-baseline="middle" font-weight="normal" font-style="italic" fill="#4a4f4c">o el socio</text>
+<text x="775" y="528" font-size="12" text-anchor="end" dominant-baseline="middle" font-weight="normal" font-style="italic" fill="#4a4f4c">cancela antes</text>
+<rect x="810" y="829" width="280" height="62" fill="#e3e6e8" stroke="#8a9096" stroke-width="1.2"/>
+<text x="950" y="851" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">Asistió, o falta registrada</text>
+<text x="950" y="869" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">(3 en el mes: sanción de 7 días)</text>
+<path d="M950 782 L950 829" fill="none" stroke="#1f2421" stroke-width="1.6"  marker-end="url(#punta)"/>
+<circle cx="950" cy="950" r="16" fill="#fff" stroke="#1f2421" stroke-width="3"/>
+<circle cx="950" cy="950" r="10" fill="#fff" stroke="#1f2421" stroke-width="1.5"/>
+<path d="M950 891 L950 934" fill="none" stroke="#1f2421" stroke-width="1.6"  marker-end="url(#punta)"/>
+<path d="M1005.0 560 v60 a45 12 0 0 0 90 0 v-60" fill="#fff" stroke="#4a4f4c" stroke-width="1.5"/>
+<ellipse cx="1050.0" cy="560" rx="45" ry="12" fill="#fff" stroke="#4a4f4c" stroke-width="1.5"/>
+<text x="1050" y="516" font-size="13" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#4a4f4c">Reservas, ingresos</text>
+<text x="1050" y="532" font-size="13" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#4a4f4c">y faltas</text>
+<path d="M1050 678 L1050 634" fill="none" stroke="#1f2421" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#abierta)"/>
+<circle cx="1330" cy="118" r="15" fill="#1f2421"/>
+<text x="1330" y="86" font-size="13" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="italic" fill="#4a4f4c">No puede impartir su clase</text>
+<rect x="1185" y="198" width="290" height="104" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>
+<text x="1330" y="216" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold" font-style="normal" fill="#1d5632">12.4</text>
+<text x="1330" y="239" font-size="15" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">Cancelación de clase</text>
+<text x="1330" y="257" font-size="15" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">por el instructor</text>
+<text x="1330" y="272" font-size="12" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#4a4f4c">RN-29 a RN-31, RN-34</text>
+<rect x="1321" y="282" width="18" height="18" fill="#fff" stroke="#6c8ebf" stroke-width="1.5"/>
+<path d="M1325 291 H1335 M1330 286 V296" stroke="#1f2421" stroke-width="1.8"/>
+<path d="M1330 133 L1330 198" fill="none" stroke="#1f2421" stroke-width="1.6"  marker-end="url(#punta)"/>
+<text x="1330" y="322" font-size="12" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="italic" fill="#4a4f4c">La autoriza o rechaza el Administrador</text>
+<rect x="1185" y="369" width="290" height="62" fill="#e3e6e8" stroke="#8a9096" stroke-width="1.2"/>
+<text x="1330" y="391" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">Clase cancelada y socios avisados,</text>
+<text x="1330" y="409" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">o sigue PROGRAMADA</text>
+<path d="M1330 302 L1330 369" fill="none" stroke="#1f2421" stroke-width="1.6"  marker-end="url(#punta)"/>
+<circle cx="1330" cy="490" r="16" fill="#fff" stroke="#1f2421" stroke-width="3"/>
+<circle cx="1330" cy="490" r="10" fill="#fff" stroke="#1f2421" stroke-width="1.5"/>
+<path d="M1330 431 L1330 474" fill="none" stroke="#1f2421" stroke-width="1.6"  marker-end="url(#punta)"/>
+<circle cx="1710" cy="118" r="15" fill="#1f2421"/>
+<text x="1710" y="86" font-size="13" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="italic" fill="#4a4f4c">Quiere decidir horarios y clases</text>
+<rect x="1570" y="198" width="280" height="104" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>
+<text x="1710" y="216" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold" font-style="normal" fill="#1d5632">12.6</text>
+<text x="1710" y="239" font-size="15" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">Consulta de</text>
+<text x="1710" y="257" font-size="15" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">reportes</text>
+<text x="1710" y="272" font-size="12" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#4a4f4c">RN-35 afluencia, RN-36 demanda</text>
+<rect x="1701" y="282" width="18" height="18" fill="#fff" stroke="#6c8ebf" stroke-width="1.5"/>
+<path d="M1705 291 H1715 M1710 286 V296" stroke="#1f2421" stroke-width="1.8"/>
+<path d="M1710 133 L1710 198" fill="none" stroke="#1f2421" stroke-width="1.6"  marker-end="url(#punta)"/>
+<circle cx="1710" cy="360" r="16" fill="#fff" stroke="#1f2421" stroke-width="3"/>
+<circle cx="1710" cy="360" r="10" fill="#fff" stroke="#1f2421" stroke-width="1.5"/>
+<path d="M1710 302 L1710 344" fill="none" stroke="#1f2421" stroke-width="1.6"  marker-end="url(#punta)"/>
+<path d="M1095 590 L1650 590 L1650 302" fill="none" stroke="#1f2421" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#abierta)"/>
+<circle cx="570" cy="900" r="15" fill="#1f2421"/>
+<text x="570" y="860" font-size="13" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="italic" fill="#4a4f4c">El socio pide congelar, baja,</text>
+<text x="570" y="876" font-size="13" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="italic" fill="#4a4f4c">reembolso o un ajuste</text>
+<rect x="1570" y="938" width="280" height="104" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>
+<text x="1710" y="956" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold" font-style="normal" fill="#1d5632">12.5</text>
+<text x="1710" y="979" font-size="15" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">Solicitud de</text>
+<text x="1710" y="997" font-size="15" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#1f2421">excepción</text>
+<text x="1710" y="1012" font-size="12" text-anchor="middle" dominant-baseline="middle" font-weight="normal" font-style="normal" fill="#4a4f4c">RN-09, RN-10, RN-12, RN-32, RN-33</text>
+<rect x="1701" y="1022" width="18" height="18" fill="#fff" stroke="#6c8ebf" stroke-width="1.5"/>
+<path d="M1705 1031 H1715 M1710 1026 V1036" stroke="#1f2421" stroke-width="1.8"/>
+<path d="M570 915 L570 990 L1570 990" fill="none" stroke="#1f2421" stroke-width="1.6"  marker-end="url(#punta)"/>
+<text x="590" y="970" font-size="12" text-anchor="start" dominant-baseline="middle" font-weight="normal" font-style="italic" fill="#4a4f4c">Recepción crea la solicitud pendiente</text>
+<circle cx="1710" cy="1085" r="16" fill="#fff" stroke="#1f2421" stroke-width="3"/>
+<circle cx="1710" cy="1085" r="10" fill="#fff" stroke="#1f2421" stroke-width="1.5"/>
+<path d="M1710 1042 L1710 1069" fill="none" stroke="#1f2421" stroke-width="1.6"  marker-end="url(#punta)"/>
+<text x="1680" y="1085" font-size="12" text-anchor="end" dominant-baseline="middle" font-weight="normal" font-style="italic" fill="#4a4f4c">Aprobada o rechazada, una sola vez</text>
+<text x="20" y="1100" font-size="13" text-anchor="start" dominant-baseline="middle" font-weight="normal" font-style="italic" fill="#4a4f4c">[+] Subproceso: su detalle está en el BPMN 12.x del mismo número.   Flecha punteada: flujo de datos o alternativo.</text>
+</svg>
