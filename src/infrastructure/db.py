@@ -146,6 +146,19 @@ class FaltaRow(Base):
     consumida: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
+class FichaSocioRow(Base):
+    """Datos del alta (BPMN 12.1). Tabla propia por la misma razón: los socios
+    del paquete no la tienen y `create_all` la crea sin tocar `socios`."""
+
+    __tablename__ = "fichas_socio"
+    socio_id: Mapped[str] = mapped_column(ForeignKey("socios.id"), primary_key=True)
+    fecha_nacimiento: Mapped[date] = mapped_column(Date)
+    correo: Mapped[str] = mapped_column(String(120))
+    telefono: Mapped[str] = mapped_column(String(30))
+    deslinde_firmado: Mapped[bool] = mapped_column(Boolean, default=False)
+    cuestionario_salud: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
 class SancionRow(Base):
     __tablename__ = "sanciones"
     socio_id: Mapped[str] = mapped_column(ForeignKey("socios.id"), primary_key=True)

@@ -15,3 +15,19 @@ def api():
     app.dependency_overrides[get_servicio_reportes] = lambda: s.reportes
     yield TestClient(app)
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def api_reloj():
+    """Cliente con un reloj de pruebas que se puede avanzar (`reloj.fijar`)."""
+    from datetime import datetime
+
+    from tests.unit.domain.helpers import RelojFijo
+
+    reloj = RelojFijo(datetime(2026, 12, 1, 8, 0))
+    s = crear_servicios_en_memoria(con_solicitudes=False, reloj=reloj)
+    app.dependency_overrides[get_servicio] = lambda: s.membresias
+    app.dependency_overrides[get_servicio_clases] = lambda: s.clases
+    app.dependency_overrides[get_servicio_reportes] = lambda: s.reportes
+    yield TestClient(app), reloj
+    app.dependency_overrides.clear()

@@ -15,13 +15,21 @@ from src.domain.entities import Plan, Socio
 from src.domain.solicitud import SolicitudDeMembresia
 from src.domain.specifications import CategoriaClase
 from src.domain.state_machine import EstadoClase, EstadoMembresia, EstadoReserva
-from src.domain.value_objects import Cantidad, Dinero, Falta, LineaSolicitud, MotivoFalta
+from src.domain.value_objects import (
+    Cantidad,
+    Dinero,
+    Falta,
+    FichaDeAlta,
+    LineaSolicitud,
+    MotivoFalta,
+)
 
 from .db import (
     CancelacionClaseRow,
     ClaseRow,
     EntradaEsperaRow,
     FaltaRow,
+    FichaSocioRow,
     IngresoRow,
     LineaRow,
     PlanRow,
@@ -34,13 +42,20 @@ from .db import (
 _VIGENTES = (EstadoMembresia.ACTIVA.value, EstadoMembresia.SUSPENDIDA.value)
 
 
-def _a_socio(r: SocioRow, faltas: list[FaltaRow], sancion: SancionRow | None) -> Socio:
+def _a_socio(
+    r: SocioRow, faltas: list[FaltaRow], sancion: SancionRow | None,
+    ficha: FichaSocioRow | None = None,
+) -> Socio:
     return Socio(
         r.id, r.nombre, es_premium=r.es_premium, activo=r.activo, ciudad=r.ciudad,
         faltas=[
             Falta(f.clase_id, f.momento, MotivoFalta(f.motivo), f.consumida) for f in faltas
         ],
         sancion_hasta=sancion.hasta if sancion else None,
+        ficha=FichaDeAlta(
+            ficha.fecha_nacimiento, ficha.correo, ficha.telefono,
+            ficha.deslinde_firmado, ficha.cuestionario_salud,
+        ) if ficha else None,
     )
 
 
@@ -96,7 +111,9 @@ class RepositorioSociosSQL:
             faltas = s.scalars(
                 select(FaltaRow).where(FaltaRow.socio_id == socio_id).order_by(FaltaRow.id)
             ).all()
-            return _a_socio(fila, list(faltas), s.get(SancionRow, socio_id))
+            return _a_socio(
+                fila, list(faltas), s.get(SancionRow, socio_id), s.get(FichaSocioRow, socio_id)
+            )
 
     def listar(self) -> list[Socio]:
         with self._sesiones() as s:
@@ -104,14 +121,25 @@ class RepositorioSociosSQL:
             for f in s.scalars(select(FaltaRow).order_by(FaltaRow.id)):
                 faltas.setdefault(f.socio_id, []).append(f)
             sanciones = {x.socio_id: x for x in s.scalars(select(SancionRow))}
+            fichas = {x.socio_id: x for x in s.scalars(select(FichaSocioRow))}
             return [
-                _a_socio(r, faltas.get(r.id, []), sanciones.get(r.id))
+                _a_socio(r, faltas.get(r.id, []), sanciones.get(r.id), fichas.get(r.id))
                 for r in s.scalars(select(SocioRow).order_by(SocioRow.id))
             ]
 
     def guardar(self, socio: Socio) -> None:
-        """Solo persiste lo que cambia en el Socio: su historial de faltas y su sanción."""
+        """Persiste al socio (el alta lo crea), su ficha, sus faltas y su sanción."""
         with self._sesiones.begin() as s:
+            s.merge(SocioRow(id=socio.id, nombre=socio.nombre, es_premium=socio.es_premium,
+                             activo=socio.activo, ciudad=socio.ciudad))
+            if socio.ficha is not None:
+                f = socio.ficha
+                s.merge(FichaSocioRow(
+                    socio_id=socio.id, fecha_nacimiento=f.fecha_nacimiento, correo=f.correo,
+                    telefono=f.telefono, deslinde_firmado=f.deslinde_firmado,
+                    cuestionario_salud=f.cuestionario_salud,
+                ))
+            s.flush()  # el socio debe existir antes que sus faltas (llave foránea)
             s.execute(delete(FaltaRow).where(FaltaRow.socio_id == socio.id))
             s.add_all(
                 FaltaRow(socio_id=socio.id, clase_id=f.clase_id, momento=f.momento,

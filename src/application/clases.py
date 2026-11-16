@@ -1,10 +1,11 @@
-"""Casos de uso de clases, reservas, lista de espera, ingresos y sanciones.
+"""Casos de uso de socios (alta), clases, reservas, lista de espera, ingresos y sanciones.
 
 Igual que `servicio.py`: carga el agregado, ejecuta el comando de dominio,
 persiste y publica. Las faltas llegan al Socio por eventos (ADR-003).
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import uuid4
@@ -13,13 +14,14 @@ from src.domain import events as ev
 from src.domain.clase import Clase, EntradaListaEspera, Reserva
 from src.domain.entities import Socio
 from src.domain.errors import ReglaDeNegocioViolada
+from src.domain.salones import salon as salon_del_catalogo
 from src.domain.specifications import (
     CategoriaClase,
     ContextoReserva,
     ElegibleParaReservar,
     PlanIncluyeCategoria,
 )
-from src.domain.value_objects import Falta, MotivoFalta
+from src.domain.value_objects import Falta, FichaDeAlta, MotivoFalta
 
 from .errors import NoEncontrado
 from .puertos import (
@@ -74,6 +76,10 @@ class ServicioDeClases:
     def listar(self) -> list[Clase]:
         return self.clases.listar()
 
+    def ya_inicio(self, clase: Clase) -> bool:
+        """Según el reloj del negocio, para que la interfaz no ofrezca acciones imposibles."""
+        return self.reloj.ahora() >= clase.inicio
+
     def listar_socios(self) -> list[Socio]:
         return self.socios.listar()
 
@@ -84,20 +90,40 @@ class ServicioDeClases:
         return socio
 
     def etiqueta(self, clase: Clase, socio_id: str) -> str:
-        """RN-14: cómo ve el socio la clase en el catálogo."""
+        """RN-14: cómo ve el socio la clase en el catálogo. Sin membresía vigente
+        nada va incluido: reservar exige una (RN-13)."""
         ctx = self._contexto(clase, self.obtener_socio(socio_id), self.reloj.ahora())
+        if not ctx.membresia_vigente:
+            return "Necesitas una membresía vigente"
         if PlanIncluyeCategoria().is_satisfied_by(ctx):
             return "Incluida en tu membresía"
         return "Costo adicional / Exclusiva Plan Premium"
 
     # --- comandos -----------------------------------------------------------
+    def dar_de_alta_socio(
+        self, nombre: str, ficha: FichaDeAlta, es_premium: bool = False, ciudad: str = "",
+    ) -> Socio:
+        """BPMN 12.1, carril de Recepción: captura los datos y valida la edad
+        (RN-01) y el deslinde (RN-02) a la fecha del reloj del negocio."""
+        socio = Socio.dar_de_alta(
+            self._siguiente_id_socio(), nombre, ficha, self.reloj.ahora().date(),
+            es_premium=es_premium, ciudad=ciudad,
+        )
+        self.socios.guardar(socio)
+        self.publicador.publicar(socio.pull_events())
+        return socio
+
     def crear_clase(
-        self, nombre: str, categoria: CategoriaClase, inicio: datetime, capacidad: int,
-        instructor: str = "", salon: str = "",
+        self, nombre: str, categoria: CategoriaClase, inicio: datetime, salon: str,
+        instructor: str = "",
     ) -> Clase:
+        """RN-11: la capacidad la fija el salón, no quien crea la clase."""
+        if inicio <= self.reloj.ahora():
+            raise ReglaDeNegocioViolada("La clase debe programarse en una fecha y hora futuras")
+        lugar = salon_del_catalogo(salon)
         clase = Clase(
-            f"CLA-{uuid4().hex[:8].upper()}", nombre, categoria, inicio, capacidad,
-            instructor=instructor, salon=salon,
+            f"CLA-{uuid4().hex[:8].upper()}", nombre, categoria, inicio, lugar.capacidad,
+            instructor=instructor, salon=lugar.nombre,
         )
         self.clases.guardar(clase)
         return clase
@@ -150,6 +176,15 @@ class ServicioDeClases:
         self.ingresos.registrar(socio_id, momento)
         return momento
 
+    def ejecutar_reloj(self, ahora: datetime | None = None) -> ResumenReloj:
+        """Entrada desde la API: se puede repetir una hora pasada, pero no adelantar
+        el reloj, porque registraría no-shows de clases que aún no ocurren."""
+        if ahora is not None and ahora > self.reloj.ahora():
+            raise ReglaDeNegocioViolada(
+                "No se puede adelantar el reloj: elige una hora pasada o deja la fecha vacía"
+            )
+        return self.procesar_reloj(ahora)
+
     def procesar_reloj(self, ahora: datetime | None = None) -> ResumenReloj:
         """Actor Sistema (reloj): expira ofertas y aplica la tolerancia de retraso."""
         ahora = ahora or self.reloj.ahora()
@@ -185,6 +220,14 @@ class ServicioDeClases:
         socio.registrar_falta(Falta(evento.clase_id, self._momento_de_falta(evento), _MOTIVOS[type(evento)]))
         self.socios.guardar(socio)
         self.publicador.publicar(socio.pull_events())
+
+    def _siguiente_id_socio(self) -> str:
+        """Continúa la numeración del paquete: FIT-C001 … FIT-C040, FIT-C041 …"""
+        numeros = [
+            int(m.group(1)) for s in self.socios.listar()
+            if (m := re.fullmatch(r"FIT-C(\d+)", s.id))
+        ]
+        return f"FIT-C{max(numeros, default=0) + 1:03d}"
 
     def _momento_de_falta(self, evento: ev.EventoDeDominio) -> datetime:
         """El mes de la falta (RN-26) es el de la clase, aunque el reloj corra después."""

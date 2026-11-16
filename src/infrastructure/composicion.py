@@ -18,6 +18,7 @@ from src.application.puertos import RepositorioClases, Reloj
 from src.application.reportes import ServicioDeReportes
 from src.application.servicio import ServicioDeMembresias
 from src.domain.clase import Clase
+from src.domain.salones import salon
 from src.domain.specifications import CategoriaClase
 
 from .csv_loader import DATA_DIR, cargar_paquete
@@ -51,19 +52,20 @@ class Servicios:
 
 def sembrar_clases_si_vacio(repo: RepositorioClases, reloj: Reloj) -> None:
     """El paquete del PIA no trae clases: estas son datos de demostración para
-    mañana. La capacidad de 2 en Yoga permite ver la lista de espera."""
+    mañana. La capacidad sale del salón (RN-11); Yoga, en el Salón 1 de un
+    lugar, permite ver la lista de espera."""
     if repo.listar():
         return
     manana = reloj.ahora().date() + timedelta(days=1)
     ejemplos = [
-        ("FIT-K001", "Yoga", CategoriaClase.ESTANDAR, time(7), 2, "Ana Ruiz", "Salón 1"),
-        ("FIT-K002", "Spinning", CategoriaClase.ESTANDAR, time(9), 15, "Luis Vega", "Salón 2"),
-        ("FIT-K003", "HIIT Pro", CategoriaClase.PREMIUM, time(18), 10, "Sara Mena", "Salón 1"),
+        ("FIT-K001", "Yoga", CategoriaClase.ESTANDAR, time(7), "Ana Ruiz", "Salón 1"),
+        ("FIT-K002", "Spinning", CategoriaClase.ESTANDAR, time(9), "Luis Vega", "Salón 3"),
+        ("FIT-K003", "HIIT Pro", CategoriaClase.PREMIUM, time(18), "Sara Mena", "Salón 2"),
     ]
-    for id_, nombre, categoria, hora, capacidad, instructor, salon in ejemplos:
+    for id_, nombre, categoria, hora, instructor, nombre_salon in ejemplos:
         repo.guardar(Clase(
-            id_, nombre, categoria, datetime.combine(manana, hora), capacidad,
-            instructor=instructor, salon=salon,
+            id_, nombre, categoria, datetime.combine(manana, hora),
+            salon(nombre_salon).capacidad, instructor=instructor, salon=nombre_salon,
         ))
 
 

@@ -201,8 +201,9 @@ def test_los_errores_de_formato_se_explican_en_lenguaje_claro(api):
 def test_otros_errores_de_formato(api):
     cuerpo = {"nombre": "", "categoria": "X", "inicio": "mañana", "capacidad": 1}
     detalle = api.post("/clases", json=cuerpo).json()["detail"]
-    assert "El campo nombre no puede estar vacío" in detalle
-    assert "Categoría debe ser uno de" in detalle
+    assert "El nombre de la clase solo puede tener letras" in detalle
+    assert "Categoría debe ser uno de: ESTANDAR o PREMIUM" in detalle
+    assert "Falta el campo instructor" in detalle
     assert "debe ser una fecha y hora" in detalle
     r = api.post("/solicitudes", content="{", headers={"content-type": "application/json"})
     assert r.json()["detail"] == "El cuerpo de la petición no es un JSON válido"

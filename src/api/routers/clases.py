@@ -30,17 +30,19 @@ _422 = {422: {"model": ErrorOut, "description": "No se cumple una regla del nego
 _400 = {400: {"model": ErrorOut, "description": "Faltan datos o tienen un formato incorrecto"}}
 
 
-def _con_etiqueta(svc: ServicioDeClases, clase, socio_id: str | None) -> ClaseOut:
-    return clase_a_salida(clase, svc.etiqueta(clase, socio_id) if socio_id else None)
+def _salida(svc: ServicioDeClases, clase, socio_id: str | None = None) -> ClaseOut:
+    return clase_a_salida(
+        clase, svc.etiqueta(clase, socio_id) if socio_id else None, svc.ya_inicio(clase)
+    )
 
 
 @router.post("", response_model=ClaseOut, status_code=201, summary="Crear una clase",
-             description="La capacidad debe ser de al menos 1 lugar. Regla: RN-11.",
+             description="Inicio futuro e instructor obligatorio. La capacidad la fija el salón "
+                         "elegido (consulta GET /salones). Regla: RN-11.",
              responses={**_400, **_422})
 def crear_clase(datos: ClaseIn, svc: Servicio):
-    return clase_a_salida(svc.crear_clase(
-        datos.nombre, datos.categoria, datos.inicio, datos.capacidad,
-        instructor=datos.instructor, salon=datos.salon,
+    return _salida(svc, svc.crear_clase(
+        datos.nombre, datos.categoria, datos.inicio, datos.salon, instructor=datos.instructor,
     ))
 
 
@@ -48,17 +50,17 @@ def crear_clase(datos: ClaseIn, svc: Servicio):
             description="Con un socio, indica si cada clase va incluida en su plan. Regla: RN-14.",
             responses={**_404})
 def listar_clases(svc: Servicio, socio_id: SocioOpcional = None):
-    return [_con_etiqueta(svc, c, socio_id) for c in svc.listar()]
+    return [_salida(svc, c, socio_id) for c in svc.listar()]
 
 
 @router.post("/procesar-reloj", response_model=ResumenRelojOut,
              summary="Revisar ofertas vencidas y retrasos",
              description="Vence las ofertas sin confirmar y marca como no-show a quien lleva "
-                         "más de 10 minutos de retraso. Puedes indicar una fecha y hora para "
-                         "simularlo. Reglas: RN-17, RN-20, RN-21.",
-             responses={**_400})
+                         "más de 10 minutos de retraso. Puedes repetirlo con una fecha y hora "
+                         "pasadas, pero no adelantarlo. Reglas: RN-17, RN-20, RN-21.",
+             responses={**_400, **_422})
 def procesar_reloj(svc: Servicio, datos: RelojIn | None = None):
-    r = svc.procesar_reloj(datos.ahora if datos else None)
+    r = svc.ejecutar_reloj(datos.ahora if datos else None)
     return ResumenRelojOut(
         ofertas_expiradas=r.ofertas_expiradas, lugares_ofrecidos=r.lugares_ofrecidos,
         no_shows=r.no_shows, lugares_asignados=r.lugares_asignados,
@@ -68,7 +70,7 @@ def procesar_reloj(svc: Servicio, datos: RelojIn | None = None):
 @router.get("/{clase_id}", response_model=ClaseOut, summary="Consultar una clase",
             responses={**_404})
 def obtener_clase(clase_id: ClaseId, svc: Servicio, socio_id: SocioOpcional = None):
-    return _con_etiqueta(svc, svc.obtener(clase_id), socio_id)
+    return _salida(svc, svc.obtener(clase_id), socio_id)
 
 
 @router.post("/{clase_id}/cancelacion", response_model=ClaseOut,
@@ -76,7 +78,7 @@ def obtener_clase(clase_id: ClaseId, svc: Servicio, socio_id: SocioOpcional = No
              description="Solo el instructor asignado y con 2 horas o más de aviso. Regla: RN-29.",
              responses={**_400, **_404, **_409, **_422})
 def solicitar_cancelacion(clase_id: ClaseId, datos: CancelacionClaseIn, svc: Servicio):
-    return clase_a_salida(svc.solicitar_cancelacion(clase_id, datos.instructor))
+    return _salida(svc, svc.solicitar_cancelacion(clase_id, datos.instructor))
 
 
 @router.post("/{clase_id}/cancelacion/resolver", response_model=ClaseOut,
@@ -85,7 +87,7 @@ def solicitar_cancelacion(clase_id: ClaseId, datos: CancelacionClaseIn, svc: Ser
                          "de espera. Si se rechaza, la clase sigue igual. Reglas: RN-30, RN-31.",
              responses={**_400, **_404, **_409})
 def resolver_cancelacion(clase_id: ClaseId, decision: DecisionIn, svc: Servicio):
-    return clase_a_salida(svc.resolver_cancelacion(clase_id, decision.aprobada))
+    return _salida(svc, svc.resolver_cancelacion(clase_id, decision.aprobada))
 
 
 @router.post("/{clase_id}/reservas", response_model=ResultadoReservaOut, status_code=201,
@@ -98,7 +100,7 @@ def reservar(clase_id: ClaseId, datos: SocioIn, svc: Servicio):
     resultado = svc.reservar(clase_id, datos.socio_id)
     tipo = "RESERVA_CONFIRMADA" if isinstance(resultado, Reserva) else "EN_LISTA_DE_ESPERA"
     return ResultadoReservaOut(
-        resultado=tipo, id=resultado.id, clase=clase_a_salida(svc.obtener(clase_id))
+        resultado=tipo, id=resultado.id, clase=_salida(svc, svc.obtener(clase_id))
     )
 
 
@@ -108,7 +110,7 @@ def reservar(clase_id: ClaseId, datos: SocioIn, svc: Servicio):
                          "Reglas: RN-15, RN-16.",
              responses={**_404, **_409})
 def cancelar_reserva(clase_id: ClaseId, reserva_id: ReservaId, svc: Servicio):
-    return clase_a_salida(svc.cancelar_reserva(clase_id, reserva_id))
+    return _salida(svc, svc.cancelar_reserva(clase_id, reserva_id))
 
 
 @router.post("/{clase_id}/oferta/confirmar", response_model=ReservaOut,

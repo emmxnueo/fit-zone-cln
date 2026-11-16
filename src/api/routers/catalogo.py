@@ -3,12 +3,19 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from src.api.dependencias import get_servicio
-from src.api.schemas import EventoOut, PlanOut
+from src.api.schemas import EventoOut, PlanOut, SalonOut
 from src.application.servicio import ServicioDeMembresias
+from src.domain.salones import SALONES
 
 router = APIRouter(tags=["Planes y eventos"])
 
 Servicio = Annotated[ServicioDeMembresias, Depends(get_servicio)]
+
+
+@router.get("/salones", response_model=list[SalonOut], summary="Ver los salones y su capacidad",
+            description="La capacidad de cada clase es la de su salón. Regla: RN-11.")
+def listar_salones():
+    return [SalonOut(nombre=s.nombre, capacidad=s.capacidad) for s in SALONES.values()]
 
 
 @router.get("/planes", response_model=list[PlanOut], summary="Ver los planes de membresía")

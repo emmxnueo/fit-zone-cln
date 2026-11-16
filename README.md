@@ -29,7 +29,8 @@ repositorio implementa tres módulos:
 - **Clases y reservas:** catálogo, reservas, lista de espera FIFO con oferta de
   15 minutos, tolerancia de retraso, no-shows, sanción automática y cancelación
   de clases por el instructor con aprobación del Administrador.
-- **Contratación de membresías:** una *solicitud de membresía* nace en
+- **Contratación de membresías:** Recepción da de alta al socio (16 años
+  cumplidos; con 16 o 17, deslinde y cuestionario de salud). Una *solicitud de membresía* nace en
   `SOLICITADA` y avanza por una máquina de estados (RN-41). Una membresía
   `ACTIVA` es lo que permite ingresar y reservar.
 - **Reportes:** afluencia por hora y día de la semana, y demanda por clase.
@@ -43,13 +44,14 @@ CANCELADA            VENCIDA ◀────────────────
                      (ACTIVA o SUSPENDIDA --dar de baja--▶ CANCELADA)
 ```
 
-Reglas implementadas (numeración del BRD): RN-03 una sola membresía activa,
+Reglas implementadas (numeración del BRD): RN-01 edad mínima de 16 años, RN-02
+deslinde y cuestionario de salud con 16 o 17 años, RN-03 una sola membresía activa,
 RN-08 renovar con pago confirmado, RN-09 congelar con aprobación del
 Administrador, RN-10 baja con aprobación del Administrador, RN-37 solicitud
 procesable, RN-38 total = Σ precio × cantidad con `Decimal`, RN-39 cupo del
 plan, RN-40 beneficio de referencia y RN-41 transiciones válidas.
 
-En reservas: RN-05 ingreso, RN-11 capacidad, RN-13 elegibilidad, RN-14 categorías
+En reservas: RN-05 ingreso, RN-11 capacidad fija por salón, RN-13 elegibilidad, RN-14 categorías
 (sin cobro del costo adicional), RN-15 a RN-18 cancelación y no-show, RN-19 a
 RN-24 lista de espera, RN-25 a RN-28 faltas y sanción, y RN-29 a RN-31
 cancelación de clases (el aviso se publica como evento). En reportes: RN-35
@@ -71,7 +73,7 @@ src/
   cambio de estado registra un Domain Event.
 - **Specification:** condiciones del negocio combinables con AND / OR / NOT
   (`SocioActivo`, `SolicitudConLineas`, `SolicitudValidada`, `PlanesHabilitados`,
-  `CupoDisponible`, `SinMembresiaActiva`, `SolicitudProcesable`,
+  `CupoDisponible`, `SinMembresiaActiva`, `RequisitosDeEdad`, `SolicitudProcesable`,
   `BeneficioDeReferencia`, `MembresiaVigente`, `PlanIncluyeCategoria`,
   `SinSancionActiva`, `ElegibleParaReservar`).
 - **State Machine:** tablas de transiciones de la membresía y de la reserva en
@@ -105,18 +107,20 @@ que se ve: no es autenticación, y la API sigue abierta. Swagger sigue en `/docs
 | POST | `/solicitudes/{id}/vencer` | ACTIVA o SUSPENDIDA → VENCIDA |
 | POST | `/solicitudes/{id}/renovar` | VENCIDA → ACTIVA (pago confirmado) |
 | POST | `/solicitudes/{id}/dar-de-baja` | ACTIVA o SUSPENDIDA → CANCELADA (aprobada) |
-| POST | `/clases` | Crear clase (201) |
+| POST | `/clases` | Crear clase (201); la capacidad la fija el salón elegido |
 | GET | `/clases`, `/clases/{id}` | Catálogo y consulta; con `?socio_id=` agrega la etiqueta (RN-14) |
 | POST | `/clases/{id}/reservas` | Reservar o entrar a la lista de espera (201) |
 | POST | `/clases/{id}/reservas/{reserva_id}/cancelar` | Cancelar; con menos de 1 h cuenta como falta |
 | POST | `/clases/{id}/oferta/confirmar` | Confirmar la oferta de lugar (15 min) |
 | POST | `/clases/{id}/cancelacion` | El instructor solicita cancelar su clase, con 2 h o más de aviso |
 | POST | `/clases/{id}/cancelacion/resolver` | El Administrador aprueba o rechaza |
-| POST | `/clases/procesar-reloj` | Expira ofertas y aplica la tolerancia; acepta `ahora` para la demostración |
-| GET | `/socios`, `/socios/{id}` | Listado, faltas y sanción |
+| POST | `/clases/procesar-reloj` | Expira ofertas y aplica la tolerancia; acepta un `ahora` pasado, nunca futuro |
+| POST | `/socios` | Dar de alta a un socio (201); edad y deslinde (RN-01, RN-02) |
+| GET | `/socios`, `/socios/{id}` | Listado, ficha del alta, faltas y sanción |
 | POST | `/socios/{id}/ingresos` | Registrar ingreso (RN-05) |
 | GET | `/reportes/afluencia?desde=&hasta=` | Ingresos por hora y día de la semana (RN-35) |
 | GET | `/reportes/demanda` | Ocupación y lista de espera por clase (RN-36) |
+| GET | `/salones` | Salones y su capacidad fija: Salón 1, 1 lugar; Salón 2, 5; Salón 3, 10 (RN-11) |
 | GET | `/planes` | Catálogo de planes |
 | GET | `/eventos` | Domain Events publicados |
 | GET | `/health` | Estado del servicio |
@@ -197,14 +201,17 @@ a `main` redespliega automáticamente.
 
 Reservas (después de activar una membresía a cada socio, con los pasos 3 y 5):
 
-8. `POST /clases` con capacidad 1 y un `inicio` futuro, en hora local y sin zona.
+8. `POST /clases` con `"salon": "Salón 1"` (1 lugar), un `instructor` y un `inicio` futuro,
+   en hora local y sin zona. Una fecha pasada responde 422; un nombre con símbolos o sin instructor, 400.
 9. `POST /clases/{id}/reservas` con dos socios: el primero queda confirmado y el
    segundo en la lista de espera.
 10. Cancelar la reserva del primero: `GET /clases/{id}` muestra la entrada `OFERTADA`.
 11. `POST /clases/{id}/oferta/confirmar` con el segundo socio, o
-    `POST /clases/procesar-reloj` con un `ahora` 16 minutos después para expirarla.
-12. Para ver un no-show, llamar `procesar-reloj` con un `ahora` 11 minutos después del
-    inicio; `GET /socios/{id}` muestra la falta y, a la tercera del mes, la sanción.
+    esperar 16 minutos y llamar `POST /clases/procesar-reloj` para expirarla.
+12. Para ver un no-show, crear una clase que empiece en 2 minutos, reservarla y llamar
+    `procesar-reloj` cuando pasen 11 minutos del inicio; `GET /socios/{id}` muestra la
+    falta y, a la tercera del mes, la sanción. El reloj no se puede adelantar (422):
+    registraría no-shows de clases que aún no ocurren.
 13. `POST /clases/FIT-K001/cancelacion` con `{"instructor": "Ana Ruiz"}` y luego
     `.../cancelacion/resolver` con `{"aprobada": true}`: la clase pasa a `CANCELADA`,
     sus reservas se cancelan sin falta y `GET /eventos` muestra a quién avisar.
@@ -212,16 +219,24 @@ Reservas (después de activar una membresía a cada socio, con los pasos 3 y 5):
     Con un ingreso registrado (`POST /socios/{id}/ingresos`), `GET /reportes/afluencia`
     con la fecha de hoy en `desde` y `hasta` lo muestra por hora y día.
 
+Alta de socio (BPMN 12.1):
+
+15. `POST /socios` con `fecha_nacimiento` de hace 17 años y `deslinde_firmado` y
+    `cuestionario_salud` en `true`: responde 201 con el nuevo número de socio y
+    `GET /eventos` muestra `DeslindeFirmado`. Sin esos dos datos responde 422 (RN-02);
+    con menos de 16 años, 422 (RN-01). Con su número se crea y activa la solicitud
+    (pasos 3 y 5).
+
 ## Alcance y relación con el análisis
 
-El BRD completo de FitZone vive en `docs/BRD.md`. El código implementa la
-**contratación de membresías** (BN-09 y BN-10), que es lo que usa el paquete de
+El BRD completo de FitZone vive en `docs/BRD.md`. El código implementa el
+**alta de socios y la contratación de membresías** (BN-07, BN-09 y BN-10), que es lo que usa el paquete de
 datos del PIA, **clases, reservas, lista de espera, sanciones y cancelación de clases**
 (BN-01 a BN-03) y **reportes** (BN-04 y BN-05). Las diferencias entre el paquete y el BRD están documentadas en el
 Anexo B del reporte, y el estado de cada regla en
 `docs/architecture/trazabilidad.md`.
 
 Quedan solo diseñados las excepciones,
-el alta con edad y deslinde, y el cambio de plan. Las notificaciones se publican
+el cambio de plan y el ajuste de aforo. Las notificaciones se publican
 como eventos, sin canal real, y `POST /clases/procesar-reloj` necesita una tarea
 programada externa que lo llame.

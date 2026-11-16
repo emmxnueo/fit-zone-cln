@@ -1,8 +1,11 @@
 """Contratos de la API (entrada y salida). Los importes viajan como texto
 decimal ("1500.00") para no perder precisión con float."""
+import re
 from datetime import date, datetime
+from typing import Literal
 
-from pydantic import BaseModel, Field, NaiveDatetime, StrictBool, StrictInt
+from pydantic import BaseModel, Field, NaiveDatetime, StrictBool, StrictInt, field_validator
+from pydantic_core import PydanticCustomError
 
 from src.domain.clase import Clase
 from src.domain.entities import Socio
@@ -17,6 +20,85 @@ class LineaIn(BaseModel):
     cantidad: StrictInt = Field(
         examples=[3], description="Cuántos periodos se contratan. Debe ser 1 o más."
     )
+
+
+# --- validación de formato (400): texto que captura una persona -------------
+_LETRA = "A-Za-zÁÉÍÓÚÜÑáéíóúüñ"
+_NOMBRE_PERSONA = re.compile(rf"[{_LETRA}]+(?:[ '.-][{_LETRA}]+)*\.?")
+_NOMBRE_CLASE = re.compile(rf"[{_LETRA}0-9]+(?:[ '.&-][{_LETRA}0-9]+)*")
+_CORREO = re.compile(r"[a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}")
+_TELEFONO = re.compile(r"(?:\+?52)?([0-9]{10})")
+
+
+def _formato(mensaje: str) -> PydanticCustomError:
+    """Error de formato (400) con un mensaje claro para quien captura."""
+    return PydanticCustomError("formato_fitzone", mensaje)
+
+
+def _texto(valor: str, patron: re.Pattern, minimo: int, mensaje: str) -> str:
+    """Quita espacios sobrantes y exige el patrón y un largo mínimo."""
+    limpio = " ".join(valor.split())
+    if len(limpio) < minimo or not patron.fullmatch(limpio):
+        raise _formato(mensaje)
+    return limpio
+
+
+class AltaSocioIn(BaseModel):
+    """Datos que captura Recepción al dar de alta a un socio (BPMN 12.1).
+    El formato se valida aquí (400); la edad y el deslinde son reglas del dominio (422)."""
+
+    nombre: str = Field(max_length=120, examples=["Ana López"],
+                        description="Nombre completo: letras, espacios, apóstrofo, punto o guion.")
+    fecha_nacimiento: date = Field(examples=["2009-05-20"],
+                                   description="Debe tener 16 años cumplidos (RN-01).")
+    correo: str = Field(max_length=120, examples=["ana@correo.com"],
+                        description="Correo electrónico; se guarda en minúsculas.")
+    telefono: str = Field(max_length=20, examples=["81 1234 5678"],
+                          description="10 dígitos; se aceptan espacios, guiones, paréntesis y +52.")
+    deslinde_firmado: StrictBool = Field(
+        default=False, examples=[True],
+        description="Firmó el deslinde en persona. Obligatorio con 16 o 17 años (RN-02).",
+    )
+    cuestionario_salud: StrictBool = Field(
+        default=False, examples=[True],
+        description="Entregó el cuestionario de salud. Obligatorio con 16 o 17 años (RN-02).",
+    )
+    ciudad: Literal["Monterrey", "Apodaca"] | None = Field(
+        default=None, examples=["Monterrey"],
+        description="Opcional. Las ciudades del paquete del PIA: Monterrey o Apodaca.",
+    )
+
+    @field_validator("nombre")
+    @classmethod
+    def _nombre(cls, valor: str) -> str:
+        return _texto(valor, _NOMBRE_PERSONA, 2,
+                      "El nombre solo puede tener letras, espacios, apóstrofo, punto o guion")
+
+    @field_validator("correo")
+    @classmethod
+    def _correo(cls, valor: str) -> str:
+        limpio = valor.strip().lower()
+        if not _CORREO.fullmatch(limpio):
+            raise _formato("El correo no es válido, por ejemplo ana@correo.com")
+        return limpio
+
+    @field_validator("telefono")
+    @classmethod
+    def _telefono(cls, valor: str) -> str:
+        m = _TELEFONO.fullmatch(re.sub(r"[\s()-]", "", valor))
+        if not m:
+            raise _formato("El teléfono debe tener 10 dígitos, por ejemplo 81 1234 5678")
+        return m.group(1)
+
+    @field_validator("fecha_nacimiento")
+    @classmethod
+    def _fecha(cls, valor: date) -> date:
+        hoy = date.today()
+        if valor > hoy:
+            raise _formato("La fecha de nacimiento no puede ser futura")
+        if valor.year < hoy.year - 120:
+            raise _formato("La fecha de nacimiento no es válida")
+        return valor
 
 
 class SolicitudIn(BaseModel):
@@ -44,16 +126,34 @@ class PagoIn(BaseModel):
 
 
 class ClaseIn(BaseModel):
-    nombre: str = Field(min_length=1, examples=["Yoga"], description="Nombre de la clase.")
+    nombre: str = Field(max_length=60, examples=["Yoga"],
+                        description="Nombre de la clase: letras, números, espacios, punto, guion o &.")
     categoria: CategoriaClase = Field(
         examples=["ESTANDAR"], description="ESTANDAR va en todos los planes; PREMIUM solo en Premium."
     )
     inicio: NaiveDatetime = Field(
-        examples=["2026-12-01T18:00:00"], description="Fecha y hora de Monterrey."
+        examples=["2026-12-01T18:00:00"], description="Fecha y hora de Monterrey; debe ser futura."
     )
-    capacidad: StrictInt = Field(examples=[20], description="Lugares disponibles. Mínimo 1.")
-    instructor: str = Field(default="", examples=["Ana Ruiz"], description="Quien imparte la clase.")
-    salon: str = Field(default="", examples=["Salón 1"], description="Dónde se imparte.")
+    instructor: str = Field(max_length=80, examples=["Ana Ruiz"],
+                            description="Quien imparte la clase. Obligatorio: solo él puede pedir "
+                                        "cancelarla (RN-29).")
+    salon: Literal["Salón 1", "Salón 2", "Salón 3"] = Field(
+        examples=["Salón 2"],
+        description="Dónde se imparte. Fija la capacidad (RN-11): Salón 1, 1 lugar; "
+                    "Salón 2, 5 lugares; Salón 3, 10 lugares.",
+    )
+
+    @field_validator("nombre")
+    @classmethod
+    def _nombre(cls, valor: str) -> str:
+        return _texto(valor, _NOMBRE_CLASE, 2,
+                      "El nombre de la clase solo puede tener letras, números, espacios, punto, guion o &")
+
+    @field_validator("instructor")
+    @classmethod
+    def _instructor(cls, valor: str) -> str:
+        return _texto(valor, _NOMBRE_PERSONA, 2,
+                      "El instructor es obligatorio y solo puede tener letras, espacios, punto o guion")
 
 
 class SocioIn(BaseModel):
@@ -100,6 +200,11 @@ class EvaluacionOut(BaseModel):
     motivos: list[str]
 
 
+class SalonOut(BaseModel):
+    nombre: str
+    capacidad: int
+
+
 class PlanOut(BaseModel):
     id: str
     descripcion: str
@@ -135,6 +240,10 @@ class ClaseOut(BaseModel):
     salon: str
     estado: str
     lugares_libres: int
+    ya_inicio: bool = Field(
+        default=False, description="La clase ya empezó según el reloj del negocio: no admite "
+                                   "reservas ni cancelaciones."
+    )
     etiqueta: str | None = Field(
         default=None, description="Solo si se consulta con `socio_id` (RN-14)."
     )
@@ -162,11 +271,22 @@ class FaltaOut(BaseModel):
     consumida: bool
 
 
+class FichaOut(BaseModel):
+    fecha_nacimiento: date
+    correo: str
+    telefono: str
+    deslinde_firmado: bool
+    cuestionario_salud: bool
+
+
 class SocioOut(BaseModel):
     id: str
     nombre: str
     es_premium: bool
     activo: bool
+    ficha: FichaOut | None = Field(
+        default=None, description="Datos del alta. Vacío en los socios del paquete del PIA."
+    )
     faltas: list[FaltaOut]
     sancion_hasta: datetime | None
 
@@ -241,7 +361,7 @@ def a_salida(s: SolicitudDeMembresia) -> SolicitudOut:
     )
 
 
-def clase_a_salida(c: Clase, etiqueta: str | None = None) -> ClaseOut:
+def clase_a_salida(c: Clase, etiqueta: str | None = None, ya_inicio: bool = False) -> ClaseOut:
     return ClaseOut(
         id=c.id,
         nombre=c.nombre,
@@ -252,6 +372,7 @@ def clase_a_salida(c: Clase, etiqueta: str | None = None) -> ClaseOut:
         salon=c.salon,
         estado=c.estado.value,
         lugares_libres=c.lugares_libres,
+        ya_inicio=ya_inicio,
         etiqueta=etiqueta,
         reservas=[
             ReservaOut(id=r.id, socio_id=r.socio_id, creada_en=r.creada_en, estado=r.estado.value)
@@ -273,6 +394,11 @@ def socio_a_salida(s: Socio) -> SocioOut:
         nombre=s.nombre,
         es_premium=s.es_premium,
         activo=s.activo,
+        ficha=FichaOut(
+            fecha_nacimiento=s.ficha.fecha_nacimiento, correo=s.ficha.correo,
+            telefono=s.ficha.telefono, deslinde_firmado=s.ficha.deslinde_firmado,
+            cuestionario_salud=s.ficha.cuestionario_salud,
+        ) if s.ficha else None,
         faltas=[
             FaltaOut(clase_id=f.clase_id, momento=f.momento, motivo=f.motivo.value,
                      consumida=f.consumida)

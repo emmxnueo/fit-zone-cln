@@ -35,7 +35,7 @@ def armar(socios=("T", "A", "B"), sin_membresia=()):
         RepositorioSolicitudesMemoria(sols), RepositorioClasesMemoria(),
         RepositorioIngresosMemoria(), pub, reloj,
     )
-    clase = svc.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO, 1)
+    clase = svc.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO, "Salón 1")
     return svc, clase.id, reloj, pub
 
 
@@ -139,13 +139,13 @@ def test_ingreso_de_otro_dia_no_cuenta_como_presente():
 def test_tres_faltas_sancionan_y_bloquean_reservas_pero_no_el_acceso():
     svc, cid, reloj, pub = armar()
     for dia in range(3):
-        c = svc.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO + timedelta(days=dia), 1)
+        c = svc.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO + timedelta(days=dia), "Salón 1")
         reloj.fijar(c.inicio - timedelta(days=1))
         svc.reservar(c.id, "T")
         svc.procesar_reloj(c.inicio + timedelta(minutes=11))
     assert ev.SancionAplicada in [type(e) for e in pub.publicados]
     reloj.fijar(INICIO + timedelta(days=3))
-    otra = svc.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO + timedelta(days=4), 1)
+    otra = svc.crear_clase("Yoga", CategoriaClase.ESTANDAR, INICIO + timedelta(days=4), "Salón 1")
     with pytest.raises(ReglaDeNegocioViolada) as e:
         svc.reservar(otra.id, "T")
     assert e.value.regla == "RN-26"
@@ -154,7 +154,7 @@ def test_tres_faltas_sancionan_y_bloquean_reservas_pero_no_el_acceso():
 
 def test_etiqueta_segun_el_plan():
     svc, cid, _, _ = armar()
-    premium = svc.crear_clase("HIIT", CategoriaClase.PREMIUM, INICIO, 5)
+    premium = svc.crear_clase("HIIT", CategoriaClase.PREMIUM, INICIO, "Salón 2")
     assert svc.etiqueta(svc.obtener(cid), "T") == "Incluida en tu membresía"
     assert svc.etiqueta(premium, "T") == "Costo adicional / Exclusiva Plan Premium"
 

@@ -8,9 +8,9 @@ El modelo se diseñó para todo FitZone en la Actividad 3 y se refinó para el P
 |---|---|---|
 | Aggregates | Socio, Membresía, Plan, Clase, Instructor, Empleado, SolicitudExcepción | **SolicitudDeMembresia** (`solicitud.py`), **Clase** (`clase.py`), **Socio** (`entities.py`) |
 | Entidades | Socio, Membresía, Plan, Clase, Reserva, EntradaListaEspera, Instructor, Empleado, SolicitudExcepción | **Plan** (`entities.py`), **Reserva**, **EntradaListaEspera** (`clase.py`) |
-| Value Objects | NumeroSocio, DatosContacto, FechaNacimiento, Deslinde, Falta, Sanción, PeriodoVigencia, SaldoAFavor, Capacidad, Horario, EstadoReserva, PlazoConfirmacion, Rol, TipoExcepcion, EstadoClase | **Dinero**, **Cantidad**, **LineaSolicitud**, **Falta** (`value_objects.py`) |
+| Value Objects | NumeroSocio, DatosContacto, FechaNacimiento, Deslinde, Falta, Sanción, PeriodoVigencia, SaldoAFavor, Capacidad, Horario, EstadoReserva, PlazoConfirmacion, Rol, TipoExcepcion, EstadoClase | **Dinero**, **Cantidad**, **LineaSolicitud**, **Falta**, **FichaDeAlta** (datos de contacto, fecha de nacimiento y deslinde) (`value_objects.py`); **Salon** (`salones.py`, catálogo fijo de RN-11) |
 | Domain Services | ElegibilidadDeReserva, CalculoDeCambioDePlan | Las Specifications cumplen el papel de validar entre agregados (`specifications.py`) |
-| Domain Events | 22 eventos (13 con suscriptor automático), BRD sección 13 | 7 eventos de la membresía y 13 de clases, reservas y sanciones (`events.py`) |
+| Domain Events | 22 eventos (13 con suscriptor automático), BRD sección 13 | 7 eventos de la membresía, 1 del alta del socio y 13 de clases, reservas y sanciones (`events.py`) |
 | Máquina de estados | Membresía, Reserva, Clase, SolicitudExcepción | **Membresía**, **Reserva** y **Clase** (`state_machine.py`); los demás ciclos están en [ciclos-de-vida.md](ciclos-de-vida.md) |
 
 Lo que el sistema comunica (push y correo) no es un agregado: reacciona a los eventos de dominio (RN-34).
@@ -80,6 +80,18 @@ classDiagram
     +id: str
     +es_premium: bool
     +activo: bool
+    +ficha: FichaDeAlta
+    +dar_de_alta(id, nombre, ficha, hoy) Socio
+    +cumple_requisitos_de_edad(dia) bool
+  }
+  class FichaDeAlta {
+    <<Value Object>>
+    +fecha_nacimiento: date
+    +correo: str
+    +telefono: str
+    +deslinde_firmado: bool
+    +cuestionario_salud: bool
+    +edad_en(dia) int
   }
   class Plan {
     <<Entity>>
@@ -106,6 +118,7 @@ classDiagram
   class BeneficioDeReferencia
   class CupoDisponible
   class SinMembresiaActiva
+  class RequisitosDeEdad
   class PlanesHabilitados
   class ContextoSolicitud {
     <<Value Object>>
@@ -138,9 +151,11 @@ classDiagram
   Specification <|-- BeneficioDeReferencia
   Specification <|-- CupoDisponible
   Specification <|-- SinMembresiaActiva
+  Specification <|-- RequisitosDeEdad
   Specification <|-- PlanesHabilitados
   Specification ..> ContextoSolicitud
   ContextoSolicitud --> Socio
+  Socio *-- FichaDeAlta
   ContextoSolicitud --> Plan
   ContextoSolicitud --> SolicitudDeMembresia
 ```
@@ -172,6 +187,11 @@ classDiagram
   class Reloj {
     <<Port>>
     +ahora() datetime
+  }
+  class Salon {
+    <<Value Object>>
+    +nombre: str
+    +capacidad: int
   }
   class Clase {
     <<Aggregate Root>>
@@ -291,6 +311,7 @@ classDiagram
   Clase "1" *-- "0..*" Reserva
   Clase "1" *-- "0..*" EntradaListaEspera
   Clase --> CategoriaClase
+  Clase ..> Salon : capacidad fija (RN-11)
   Clase --> EstadoClase
   Clase ..> ContextoReserva : evalúa
   Reserva --> EstadoReserva
@@ -313,13 +334,14 @@ classDiagram
 
 | Evento | Lo emite | Regla |
 |---|---|---|
-| `MembresiaActivada` | `activar()` | RN-03, RN-37, RN-38, RN-39 |
+| `MembresiaActivada` | `activar()` | RN-01 a RN-03, RN-37, RN-38, RN-39 |
 | `MembresiaCongelada` | `congelar()` | RN-09 |
 | `MembresiaDescongelada` | `descongelar()` | RN-41 |
 | `MembresiaVencida` | `vencer()` | RN-04 |
 | `MembresiaRenovada` | `renovar()` | RN-08 |
 | `MembresiaDadaDeBaja` | `dar_de_baja()` | RN-10 |
 | `SolicitudCancelada` | `cancelar()` | RN-41 |
+| `DeslindeFirmado` | `Socio.dar_de_alta()` con 16 o 17 años | RN-02 |
 | `ReservaConfirmada` | `Clase.reservar()`, `confirmar_oferta()`, asignación por retraso | RN-11, RN-20, RN-21 |
 | `SocioEnListaDeEspera` | `Clase.reservar()` | RN-13, RN-19 |
 | `ReservaCancelada` | `Clase.cancelar_reserva()` | RN-15, RN-16 |

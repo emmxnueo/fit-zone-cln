@@ -496,8 +496,7 @@ Característica: Deslinde para menores de edad
     Cuando Recepción intenta activar su membresía
     Entonces <resultado>
     Ejemplos:
-      | edad | documentación | resultado
-      |
+      | edad | documentación | resultado |
       | 15 | sin deslinde | el sistema rechaza el alta por edad mínima |
       | 16 | sin deslinde ni cuestionario de salud | el sistema exige el deslinde y no activa |
       | 17 | con deslinde y cuestionario de salud | la membresía se activa |

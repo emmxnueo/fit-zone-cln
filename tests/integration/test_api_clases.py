@@ -1,5 +1,5 @@
 """API de clases, reservas, lista de espera, ingresos, sanciones y reportes."""
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from src.api.dependencias import get_servicio_clases, get_servicio_reportes
 from src.application.clases import ServicioDeClases
@@ -22,13 +22,16 @@ def con_membresia(api, socio):
     return socio
 
 
+_SALON = {1: "Salón 1", 5: "Salón 2", 10: "Salón 3"}  # RN-11: la capacidad la fija el salón
+
+
 def crear_clase(api, en=timedelta(days=1), capacidad=1, categoria="ESTANDAR"):
     inicio = RelojDelSistema().ahora() + en
     r = api.post("/clases", json={
         "nombre": "Yoga", "categoria": categoria, "inicio": inicio.isoformat(),
-        "capacidad": capacidad,
+        "salon": _SALON[capacidad], "instructor": "Ana Ruiz",
     })
-    assert r.status_code == 201
+    assert r.status_code == 201 and r.json()["capacidad"] == capacidad
     return r.json()
 
 
@@ -48,11 +51,13 @@ def test_dependencia_por_defecto_entrega_el_servicio_de_clases():
 
 
 def test_formato_y_reglas_al_crear_clase(api):
-    cuerpo = {"nombre": "Yoga", "categoria": "ESTANDAR", "inicio": "2026-12-01T18:00:00"}
-    assert api.post("/clases", json={**cuerpo, "capacidad": 0}).status_code == 422
-    assert api.post("/clases", json={**cuerpo, "capacidad": "diez"}).status_code == 400
-    assert api.post("/clases", json={**cuerpo, "capacidad": 1, "categoria": "X"}).status_code == 400
-    con_zona = {**cuerpo, "capacidad": 1, "inicio": "2026-12-01T18:00:00Z"}
+    inicio = (RelojDelSistema().ahora() + timedelta(days=1)).replace(microsecond=0)
+    cuerpo = {"nombre": "Yoga", "categoria": "ESTANDAR", "inicio": inicio.isoformat(),
+              "instructor": "Ana Ruiz"}
+    assert api.post("/clases", json={**cuerpo, "salon": "Salón 9"}).status_code == 400
+    assert api.post("/clases", json=cuerpo).status_code == 400  # falta el salón
+    assert api.post("/clases", json={**cuerpo, "salon": "Salón 1", "categoria": "X"}).status_code == 400
+    con_zona = {**cuerpo, "salon": "Salón 1", "inicio": inicio.isoformat() + "Z"}
     assert api.post("/clases", json=con_zona).status_code == 400
 
 
@@ -111,17 +116,21 @@ def test_cancelacion_tardia_aparece_como_falta(api):
     assert [f["motivo"] for f in faltas] == ["CANCELACION_TARDIA"]
 
 
-def test_ingreso_y_tolerancia_con_el_reloj(api):
+def test_ingreso_y_tolerancia_con_el_reloj(api_reloj):
+    api, reloj = api_reloj
     a, b = (con_membresia(api, s) for s in NORMALES[:2])
-    clase = crear_clase(api, en=timedelta(hours=2))
+    inicio = reloj.ahora() + timedelta(hours=2)
+    clase = api.post("/clases", json={
+        "nombre": "Yoga", "categoria": "ESTANDAR", "inicio": inicio.isoformat(),
+        "salon": "Salón 2", "instructor": "Ana Ruiz",
+    }).json()
     reservar(api, clase, a)
     reservar(api, clase, b)
     assert api.post(f"/socios/{b}/ingresos").status_code == 201
-    ahora = datetime.fromisoformat(clase["inicio"]) + timedelta(minutes=11)
-    r = api.post("/clases/procesar-reloj", json={"ahora": ahora.isoformat()})
-    # la clase puede caer al día siguiente cerca de medianoche: entonces B no está presente
+    reloj.fijar(inicio + timedelta(minutes=11))
+    r = api.post("/clases/procesar-reloj")
     assert r.status_code == 200 and r.json()["no_shows"] == 1
-    assert api.post("/clases/procesar-reloj").status_code == 200
+    assert api.get(f"/clases/{clase['id']}").json()["ya_inicio"] is True
     eventos = [e["evento"] for e in api.get("/eventos").json()]
     assert "NoShowRegistrado" in eventos and "FaltaRegistrada" in eventos
 
@@ -167,7 +176,7 @@ def clase_de_instructor(api, en=timedelta(days=1)):
     inicio = RelojDelSistema().ahora() + en
     return api.post("/clases", json={
         "nombre": "Yoga", "categoria": "ESTANDAR", "inicio": inicio.isoformat(),
-        "capacidad": 1, "instructor": "Ana Ruiz",
+        "salon": "Salón 1", "instructor": "Ana Ruiz",
     }).json()
 
 
@@ -217,3 +226,82 @@ def test_la_interfaz_se_sirve_en_la_raiz(api):
     r = api.get("/")
     assert r.status_code == 200 and "text/html" in r.headers["content-type"]
     assert "Quattrocento Sans" in r.text and "Administrador" in r.text
+
+
+# --- Correcciones de la versión 0.7.1 -----------------------------------------
+import pytest  # noqa: E402
+
+
+def test_el_reloj_no_se_adelanta_pero_se_puede_repetir(api_reloj):
+    api, reloj = api_reloj
+    futuro = (reloj.ahora() + timedelta(hours=3)).isoformat()
+    r = api.post("/clases/procesar-reloj", json={"ahora": futuro})
+    assert r.status_code == 422 and "adelantar" in r.json()["detail"]
+    pasado = (reloj.ahora() - timedelta(hours=1)).isoformat()
+    assert api.post("/clases/procesar-reloj", json={"ahora": pasado}).status_code == 200
+
+
+def test_no_se_crean_clases_en_el_pasado(api_reloj):
+    api, reloj = api_reloj
+    r = api.post("/clases", json={
+        "nombre": "Yoga", "categoria": "ESTANDAR", "salon": "Salón 2", "instructor": "Ana Ruiz",
+        "inicio": (reloj.ahora() - timedelta(minutes=1)).isoformat(),
+    })
+    assert r.status_code == 422 and "futuras" in r.json()["detail"]
+
+
+def test_ya_inicio_se_calcula_con_el_reloj_del_negocio(api_reloj):
+    api, reloj = api_reloj
+    inicio = reloj.ahora() + timedelta(hours=1)
+    clase = api.post("/clases", json={
+        "nombre": "Spinning", "categoria": "ESTANDAR", "salon": "Salón 2", "instructor": "Luis Vega",
+        "inicio": inicio.isoformat(),
+    }).json()
+    assert clase["ya_inicio"] is False
+    reloj.fijar(inicio)
+    assert api.get("/clases").json()[0]["ya_inicio"] is True
+
+
+def test_sin_membresia_la_etiqueta_no_dice_incluida(api):
+    clase = crear_clase(api)
+    socio = NORMALES[0]
+    etiqueta = api.get(f"/clases/{clase['id']}", params={"socio_id": socio}).json()["etiqueta"]
+    assert etiqueta == "Necesitas una membresía vigente"
+    assert reservar(api, clase, socio).json()["regla"] == "RN-13"
+
+
+_CLASE = {"nombre": "Yoga", "categoria": "ESTANDAR", "salon": "Salón 2", "instructor": "Ana Ruiz"}
+
+
+@pytest.mark.parametrize("campo,valor", [
+    ("nombre", "   "), ("nombre", "<b>$$$</b>"), ("nombre", "Y"),
+    ("instructor", ""), ("instructor", "Ana123"), ("instructor", "<script>"),
+    ("salon", "@@@"), ("salon", "Salón 4"), ("salon", ""),
+])
+def test_formato_de_la_clase_es_400(api, campo, valor):
+    inicio = (RelojDelSistema().ahora() + timedelta(days=1)).isoformat()
+    r = api.post("/clases", json={**_CLASE, "inicio": inicio, campo: valor})
+    assert r.status_code == 400, r.json()
+
+
+def test_nombres_validos_se_normalizan(api):
+    inicio = (RelojDelSistema().ahora() + timedelta(days=1)).isoformat()
+    r = api.post("/clases", json={**_CLASE, "inicio": inicio, "nombre": "  HIIT   Pro 2 ",
+                                  "instructor": " María  O'Neil "})
+    assert r.status_code == 201
+    assert (r.json()["nombre"], r.json()["instructor"]) == ("HIIT Pro 2", "María O'Neil")
+
+
+def test_la_capacidad_la_fija_el_salon(api):
+    """RN-11: capacidad fija por salón, independiente de instructor y horario."""
+    assert api.get("/salones").json() == [
+        {"nombre": "Salón 1", "capacidad": 1},
+        {"nombre": "Salón 2", "capacidad": 5},
+        {"nombre": "Salón 3", "capacidad": 10},
+    ]
+    inicio = (RelojDelSistema().ahora() + timedelta(days=1)).isoformat()
+    for salon, capacidad in (("Salón 1", 1), ("Salón 2", 5), ("Salón 3", 10)):
+        r = api.post("/clases", json={**_CLASE, "inicio": inicio, "salon": salon})
+        assert (r.json()["salon"], r.json()["capacidad"]) == (salon, capacidad)
+    r = api.post("/clases", json={**_CLASE, "inicio": inicio, "capacidad": 50})
+    assert r.json()["capacidad"] == 5  # la capacidad enviada se ignora: manda el salón
