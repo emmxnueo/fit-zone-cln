@@ -40,7 +40,7 @@ Los errores explican qué pasó e indican la regla del BRD, por ejemplo `RN-13`.
 _SECCIONES = [
     {"name": "Membresías", "description": "Solicitudes y ciclo de vida de la membresía."},
     {"name": "Clases y reservas", "description": "Catálogo, reservas y lista de espera."},
-    {"name": "Socios", "description": "Faltas, sanciones y entradas al gimnasio."},
+    {"name": "Socios", "description": "Alta de socios, faltas, sanciones y entradas al gimnasio."},
     {"name": "Reportes", "description": "Afluencia y demanda de clases."},
     {"name": "Planes y eventos", "description": "Planes disponibles y eventos del sistema."},
     {"name": "Sistema", "description": "Estado del servicio."},
@@ -49,7 +49,7 @@ _SECCIONES = [
 app = FastAPI(
     title="FitZone",
     description=_DESCRIPCION,
-    version="0.7.0",
+    version="0.8.0",
     openapi_tags=_SECCIONES,
     docs_url=None,
 )

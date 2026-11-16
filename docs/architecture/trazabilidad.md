@@ -8,12 +8,15 @@ Recorre el camino **necesidad (BN) → historia (US) y Gherkin → regla (RN) �
 
 | Clave | Archivo |
 |---|---|
+| `D/alta` | `tests/unit/domain/test_socio_alta.py` |
 | `D/solicitud` | `tests/unit/domain/test_solicitud.py` |
 | `D/specs` | `tests/unit/domain/test_specifications.py` |
 | `D/estados` | `tests/unit/domain/test_state_machine.py` |
 | `D/vo` | `tests/unit/domain/test_value_objects.py` |
 | `A/servicio` | `tests/unit/application/test_servicio.py` |
+| `A/alta` | `tests/unit/application/test_alta_socios.py` |
 | `I/sql` | `tests/unit/infrastructure/test_repositorios_sql.py` |
+| `I/alta` | `tests/unit/infrastructure/test_alta_socios_sql.py` |
 | `D/clase` | `tests/unit/domain/test_clase.py` |
 | `D/faltas` | `tests/unit/domain/test_socio_faltas.py` |
 | `A/clases` | `tests/unit/application/test_clases.py` |
@@ -21,12 +24,15 @@ Recorre el camino **necesidad (BN) → historia (US) y Gherkin → regla (RN) �
 | `A/reportes` | `tests/unit/application/test_reportes.py` |
 | `API/clases` | `tests/integration/test_api_clases.py` |
 | `API` | `tests/integration/test_api.py` |
+| `API/socios` | `tests/integration/test_api_socios.py` |
 | `PKG` | `tests/integration/test_paquete_csv.py` (120 casos y 20 transiciones contra un oráculo independiente) |
 
 ## 1. Reglas implementadas o parciales
 
 | Regla | Historia | Componente | Pruebas | Estado |
 |---|---|---|---|---|
+| **RN-01** edad mínima de 16 años (422) | US-15, US-11 | `Socio.dar_de_alta` y `FichaDeAlta.edad_en` (`entities.py`, `value_objects.py`); `RequisitosDeEdad` al activar; `POST /socios`; Recepción > Nuevo socio | `D/alta::test_15_anos_se_rechaza_por_edad_minima`, `test_un_dia_antes_de_cumplir_16_se_rechaza`, `test_el_dia_del_cumpleanos_ya_cuenta`, `test_activar_rechaza_menor_de_16_con_rn01`; `A/alta::test_la_edad_se_calcula_con_el_reloj_del_negocio`; `API/socios::test_menor_de_16_422_rn01` | Implementada |
+| **RN-02** deslinde y cuestionario de salud con 16 o 17 años (422) | US-11 | `FichaDeAlta.documentacion_completa`; `Socio.dar_de_alta`; `RequisitosDeEdad` (`specifications.py`) antes de RN-03 al activar; evento `DeslindeFirmado` | `D/alta::test_16_anos_sin_deslinde_ni_cuestionario_se_rechaza`, `test_17_anos_con_deslinde_y_cuestionario_se_acepta`, `test_18_anos_sin_deslinde_se_acepta_sin_evento_de_deslinde`, `test_rn02_exige_ambos_documentos`, `test_activar_rechaza_menor_sin_deslinde_antes_que_rn03`; `A/alta::test_flujo_bpmn_12_1_alta_solicitud_y_activacion`; `API/socios::test_16_sin_deslinde_422_rn02`, `test_17_con_deslinde_publica_el_evento` | Implementada |
 | **RN-03** una membresía activa por socio (409) | US-21 | `SinMembresiaActiva` (`specifications.py`); `SolicitudDeMembresia.activar`; `vigentes_del_socio` en los repositorios | `D/solicitud::test_activar_con_membresia_activa_es_409`; `D/specs::test_sin_membresia_activa`; `A/servicio::test_segunda_membresia_activa_del_mismo_socio_es_409`, `test_la_cancelada_no_cuenta_como_activa`; `API::test_segunda_membresia_activa_es_409_por_rn03` | Implementada |
 | **RN-04** vencimiento sin gracia | US-03 | `SolicitudDeMembresia.vencer`; `POST /solicitudes/{id}/vencer`; evento `MembresiaVencida` | `D/solicitud::test_vencer_desde_activa_y_renovar`; `API::test_vencer_renovar_y_rn08` | Parcial: la transición existe y se dispara por llamada; no hay reloj que la ejecute al llegar la fecha |
 | **RN-05** ingreso con membresía vigente (422) | US-02 | `ServicioDeClases.registrar_ingreso`; `POST /socios/{id}/ingresos`; `RepositorioIngresos` | `A/clases::test_membresia_vencida_no_reserva_ni_ingresa`; `API/clases::test_ingreso_sin_membresia_es_422` | Implementada |
@@ -58,7 +64,6 @@ Recorre el camino **necesidad (BN) → historia (US) y Gherkin → regla (RN) �
 
 | Regla | Tema | Historia | Dónde está el análisis y el diseño |
 |---|---|---|---|
-| RN-01, RN-02 | Edad mínima y deslinde | US-11, US-15 | BRD 7.1; BPMN 12.1; Gherkin US-11 y US-15 |
 | RN-06, RN-07 | Upgrade, downgrade y cancelación anticipada | US-13 | BRD 7.1; Gherkin US-13; `CalculoDeCambioDePlan` (Act3) |
 | RN-12 | Ajuste de aforo | US-17 | BRD 7.2; depende de `SolicitudExcepcion` |
 | RN-32, RN-33 | Solicitudes de excepción | US-12, US-17 | BRD 7.5; BPMN 12.5; ciclo de la solicitud de excepción |
@@ -72,7 +77,7 @@ Recorre el camino **necesidad (BN) → historia (US) y Gherkin → regla (RN) �
 | **BN-03** | Aviso de cancelación de clase | RN-29 a RN-31, RN-34 | **Implementada**, sin canal real de aviso |
 | **BN-04, BN-05** | Reportes de afluencia y demanda | RN-35, RN-36 | **Implementada** |
 | BN-06 | Clases incluidas frente a costo adicional | RN-14 | Parcial: etiquetas y bloqueo, sin cobro |
-| BN-07 | Deslinde de 16 y 17 años | RN-01, RN-02 | Diseñada |
+| **BN-07** | Deslinde de 16 y 17 años | RN-01, RN-02 | **Implementada** (versión 0.8.0) |
 | BN-08 | Excepciones solo del Administrador | RN-09, RN-10, RN-32, RN-33 | Parcial: RN-09 y RN-10 |
 | **BN-09** | Ciclo de vida de la membresía | RN-03, RN-04, RN-08, RN-09, RN-10, RN-41 | **Implementada** |
 | **BN-10** | Beneficio de referencia (paquete del PIA) | RN-37 a RN-40 | **Implementada** |
@@ -85,7 +90,8 @@ Recorre el camino **necesidad (BN) → historia (US) y Gherkin → regla (RN) �
 | `GET /solicitudes`, `GET /solicitudes/{id}` | Listar y consultar | | 200, 404 | `API::test_consultar_y_listar` |
 | `GET /solicitudes/{id}/procesable` | Evaluar RN-37 | RN-37 | 200, 404 | `API::test_procesable_explica_los_motivos` |
 | `GET /solicitudes/{id}/beneficio-referencia` | Evaluar RN-40 | RN-40 | 200, 404 | `API::test_beneficio_de_referencia` |
-| `POST /solicitudes/{id}/activar` | SOLICITADA → ACTIVA | RN-41, RN-03, RN-37, RN-38, RN-39 | 200, 404, 409, 422 | `API::test_activar_y_repetir_aprobacion` |
+| `POST /socios` | Alta del socio (BPMN 12.1) | RN-01, RN-02 | 201, 400, 422 | `API/socios::test_alta_de_adulto_201`, `test_formato_invalido_400_en_espanol` |
+| `POST /solicitudes/{id}/activar` | SOLICITADA → ACTIVA | RN-41, RN-01, RN-02, RN-03, RN-37, RN-38, RN-39 | 200, 404, 409, 422 | `API::test_activar_y_repetir_aprobacion` |
 | `POST /solicitudes/{id}/cancelar` | SOLICITADA → CANCELADA | RN-41 | 200, 404, 409 | `API::test_cancelar_y_no_se_puede_dos_veces` |
 | `POST /solicitudes/{id}/congelar` | ACTIVA → SUSPENDIDA | RN-09, RN-41 | 200, 400, 404, 409, 422 | `API::test_congelar_descongelar_y_rn09` |
 | `POST /solicitudes/{id}/descongelar` | SUSPENDIDA → ACTIVA | RN-41 | 200, 404, 409 | `API::test_congelar_descongelar_y_rn09` |

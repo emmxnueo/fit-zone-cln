@@ -37,7 +37,7 @@ La duración del plan (1, 3, 6 o 12 meses) es un dato (`duracion_meses`), no un 
 | 1 | El paquete carga solicitudes con planes deshabilitados | Se pueden crear y se rechazan al activar con un error claro (422, RN-38), en vez de impedir cargarlas |
 | 2 | 20 socios tienen dos solicitudes | Sus transiciones se ejecutan cada una sobre un estado nuevo (`fabrica_servicio`) para que no choquen entre sí por RN-03 |
 | 3 | El paquete usa `autorizado` y el BRD habla de validación | Se usa `validada`, que expresa mejor lo que verifica Recepción |
-| 4 | El paquete no trae edad, deslinde, clases ni reservas | RN-01 y RN-02 quedan analizadas pero no programadas. Las reservas sí se programaron, con clases de demostración propias que no vienen del paquete ([ADR-008](adr/ADR-008-alcance-del-codigo.md)) |
+| 4 | El paquete no trae edad, deslinde, clases ni reservas | Los 40 socios del paquete no tienen fecha de nacimiento: se aceptan sin restricción de edad. Los socios dados de alta con `POST /socios` (versión 0.8.0) sí pasan por RN-01 y RN-02. Las reservas sí se programaron, con clases de demostración propias que no vienen del paquete ([ADR-008](adr/ADR-008-alcance-del-codigo.md)) |
 | 5 | RN-40 no sale de la entrevista, es una regla ilustrativa del paquete | Se documenta como tal en el BRD |
 | 6 | El paquete incluye planes de 6 meses; el BRD solo reconoce mensual, trimestral y anual | Se conserva el dato del paquete; el catálogo oficial del negocio sigue siendo el del BRD |
 

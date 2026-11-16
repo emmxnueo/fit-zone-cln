@@ -3,7 +3,7 @@
   "info": {
     "title": "FitZone",
     "description": "\nAPI de FitZone (Equipo 11, FIME-UANL): membresías, clases, reservas, lista de espera,\nsanciones y reportes.\n\n**Cómo probarla**\n\n1. Crea una solicitud en `POST /solicitudes`.\n2. Actívala en `POST /solicitudes/{solicitud_id}/activar`.\n3. Consulta las clases en `GET /clases` y reserva en `POST /clases/{clase_id}/reservas`.\n\n**Qué significa cada respuesta**\n\n| Código | Significado |\n|---|---|\n| 200 | Todo salió bien |\n| 201 | Se creó correctamente |\n| 400 | Faltan datos o tienen un formato incorrecto |\n| 404 | Lo que buscas no existe |\n| 409 | La acción no se puede hacer en este momento |\n| 422 | No se cumple una regla del negocio |\n\nLos errores explican qué pasó e indican la regla del BRD, por ejemplo `RN-13`.\n",
-    "version": "0.7.0"
+    "version": "0.8.0"
   },
   "paths": {
     "/health": {
@@ -294,7 +294,7 @@
           "Membresías"
         ],
         "summary": "Activar una membresía",
-        "description": "El socio no debe tener otra membresía activa, la solicitud debe estar completa y el plan debe tener cupo. Reglas: RN-03, RN-37, RN-38, RN-39, RN-41.",
+        "description": "El socio debe cumplir la edad y, con 16 o 17 años, tener el deslinde; no debe tener otra membresía activa, la solicitud debe estar completa y el plan debe tener cupo. Reglas: RN-01, RN-02, RN-03, RN-37, RN-38, RN-39, RN-41.",
         "operationId": "activar_solicitudes__solicitud_id__activar_post",
         "parameters": [
           {
@@ -1451,6 +1451,56 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Socios"
+        ],
+        "summary": "Dar de alta a un socio",
+        "description": "Recepción captura los datos del socio. Los menores de 16 años se rechazan; con 16 o 17 se exigen el deslinde y el cuestionario de salud. Después se crea su solicitud de membresía. Reglas: RN-01, RN-02.",
+        "operationId": "dar_de_alta_socios_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AltaSocioIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Operación correcta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SocioOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Faltan datos o tienen un formato incorrecto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No se cumple una regla del negocio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/socios/{socio_id}": {
@@ -1753,6 +1803,92 @@
           "por_dia"
         ],
         "title": "AfluenciaOut"
+      },
+      "AltaSocioIn": {
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Nombre",
+            "description": "Nombre completo: letras, espacios, apóstrofo, punto o guion.",
+            "examples": [
+              "Ana López"
+            ]
+          },
+          "fecha_nacimiento": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Nacimiento",
+            "description": "Debe tener 16 años cumplidos (RN-01).",
+            "examples": [
+              "2009-05-20"
+            ]
+          },
+          "correo": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Correo",
+            "description": "Correo electrónico; se guarda en minúsculas.",
+            "examples": [
+              "ana@correo.com"
+            ]
+          },
+          "telefono": {
+            "type": "string",
+            "maxLength": 20,
+            "title": "Telefono",
+            "description": "10 dígitos; se aceptan espacios, guiones, paréntesis y +52.",
+            "examples": [
+              "81 1234 5678"
+            ]
+          },
+          "deslinde_firmado": {
+            "type": "boolean",
+            "title": "Deslinde Firmado",
+            "description": "Firmó el deslinde en persona. Obligatorio con 16 o 17 años (RN-02).",
+            "default": false,
+            "examples": [
+              true
+            ]
+          },
+          "cuestionario_salud": {
+            "type": "boolean",
+            "title": "Cuestionario Salud",
+            "description": "Entregó el cuestionario de salud. Obligatorio con 16 o 17 años (RN-02).",
+            "default": false,
+            "examples": [
+              true
+            ]
+          },
+          "ciudad": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Monterrey",
+                  "Apodaca"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ciudad",
+            "description": "Opcional. Las ciudades del paquete del PIA: Monterrey o Apodaca.",
+            "examples": [
+              "Monterrey"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "nombre",
+          "fecha_nacimiento",
+          "correo",
+          "telefono"
+        ],
+        "title": "AltaSocioIn",
+        "description": "Datos que captura Recepción al dar de alta a un socio (BPMN 12.1).\nEl formato se valida aquí (400); la edad y el deslinde son reglas del dominio (422)."
       },
       "CancelacionClaseIn": {
         "properties": {
@@ -2163,6 +2299,40 @@
         ],
         "title": "FaltaOut"
       },
+      "FichaOut": {
+        "properties": {
+          "fecha_nacimiento": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha Nacimiento"
+          },
+          "correo": {
+            "type": "string",
+            "title": "Correo"
+          },
+          "telefono": {
+            "type": "string",
+            "title": "Telefono"
+          },
+          "deslinde_firmado": {
+            "type": "boolean",
+            "title": "Deslinde Firmado"
+          },
+          "cuestionario_salud": {
+            "type": "boolean",
+            "title": "Cuestionario Salud"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fecha_nacimiento",
+          "correo",
+          "telefono",
+          "deslinde_firmado",
+          "cuestionario_salud"
+        ],
+        "title": "FichaOut"
+      },
       "IngresoOut": {
         "properties": {
           "socio_id": {
@@ -2466,6 +2636,17 @@
             "type": "boolean",
             "title": "Activo"
           },
+          "ficha": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FichaOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Datos del alta. Vacío en los socios del paquete del PIA."
+          },
           "faltas": {
             "items": {
               "$ref": "#/components/schemas/FaltaOut"
@@ -2628,7 +2809,7 @@
     },
     {
       "name": "Socios",
-      "description": "Faltas, sanciones y entradas al gimnasio."
+      "description": "Alta de socios, faltas, sanciones y entradas al gimnasio."
     },
     {
       "name": "Reportes",

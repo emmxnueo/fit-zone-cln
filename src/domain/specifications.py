@@ -152,6 +152,13 @@ class CupoDisponible(Specification):
         )
 
 
+class RequisitosDeEdad(Specification):
+    """RN-01 y RN-02, a la fecha de la solicitud (BPMN 12.1)."""
+
+    def is_satisfied_by(self, ctx: ContextoSolicitud) -> bool:
+        return ctx.socio.cumple_requisitos_de_edad(ctx.solicitud.fecha_solicitud)
+
+
 class SinMembresiaActiva(Specification):
     """RN-03: un socio solo puede tener una membresía activa."""
 

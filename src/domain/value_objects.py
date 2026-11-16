@@ -1,8 +1,9 @@
-"""Value Objects de la contratación de membresías (RN-38) y de las faltas (RN-25)."""
+"""Value Objects de la contratación de membresías (RN-38), de las faltas (RN-25)
+y de la ficha de alta del socio (RN-01, RN-02)."""
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from enum import Enum
 
@@ -81,3 +82,27 @@ class Falta:
     momento: datetime
     motivo: MotivoFalta
     consumida: bool = False
+
+
+@dataclass(frozen=True)
+class FichaDeAlta:
+    """Datos que Recepción captura al dar de alta al socio (BPMN 12.1).
+
+    `deslinde_firmado` y `cuestionario_salud` solo se exigen con 16 o 17 años (RN-02).
+    """
+
+    fecha_nacimiento: date
+    correo: str
+    telefono: str
+    deslinde_firmado: bool = False
+    cuestionario_salud: bool = False
+
+    def edad_en(self, dia: date) -> int:
+        """Años cumplidos en `dia`: el día del cumpleaños ya cuenta."""
+        cumplio = (dia.month, dia.day) >= (self.fecha_nacimiento.month, self.fecha_nacimiento.day)
+        return dia.year - self.fecha_nacimiento.year - (0 if cumplio else 1)
+
+    @property
+    def documentacion_completa(self) -> bool:
+        """RN-02: deslinde firmado en persona y cuestionario de salud."""
+        return self.deslinde_firmado and self.cuestionario_salud

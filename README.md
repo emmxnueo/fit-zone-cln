@@ -29,7 +29,8 @@ repositorio implementa tres módulos:
 - **Clases y reservas:** catálogo, reservas, lista de espera FIFO con oferta de
   15 minutos, tolerancia de retraso, no-shows, sanción automática y cancelación
   de clases por el instructor con aprobación del Administrador.
-- **Contratación de membresías:** una *solicitud de membresía* nace en
+- **Contratación de membresías:** Recepción da de alta al socio (16 años
+  cumplidos; con 16 o 17, deslinde y cuestionario de salud). Una *solicitud de membresía* nace en
   `SOLICITADA` y avanza por una máquina de estados (RN-41). Una membresía
   `ACTIVA` es lo que permite ingresar y reservar.
 - **Reportes:** afluencia por hora y día de la semana, y demanda por clase.
@@ -43,7 +44,8 @@ CANCELADA            VENCIDA ◀────────────────
                      (ACTIVA o SUSPENDIDA --dar de baja--▶ CANCELADA)
 ```
 
-Reglas implementadas (numeración del BRD): RN-03 una sola membresía activa,
+Reglas implementadas (numeración del BRD): RN-01 edad mínima de 16 años, RN-02
+deslinde y cuestionario de salud con 16 o 17 años, RN-03 una sola membresía activa,
 RN-08 renovar con pago confirmado, RN-09 congelar con aprobación del
 Administrador, RN-10 baja con aprobación del Administrador, RN-37 solicitud
 procesable, RN-38 total = Σ precio × cantidad con `Decimal`, RN-39 cupo del
@@ -71,7 +73,7 @@ src/
   cambio de estado registra un Domain Event.
 - **Specification:** condiciones del negocio combinables con AND / OR / NOT
   (`SocioActivo`, `SolicitudConLineas`, `SolicitudValidada`, `PlanesHabilitados`,
-  `CupoDisponible`, `SinMembresiaActiva`, `SolicitudProcesable`,
+  `CupoDisponible`, `SinMembresiaActiva`, `RequisitosDeEdad`, `SolicitudProcesable`,
   `BeneficioDeReferencia`, `MembresiaVigente`, `PlanIncluyeCategoria`,
   `SinSancionActiva`, `ElegibleParaReservar`).
 - **State Machine:** tablas de transiciones de la membresía y de la reserva en
@@ -113,7 +115,8 @@ que se ve: no es autenticación, y la API sigue abierta. Swagger sigue en `/docs
 | POST | `/clases/{id}/cancelacion` | El instructor solicita cancelar su clase, con 2 h o más de aviso |
 | POST | `/clases/{id}/cancelacion/resolver` | El Administrador aprueba o rechaza |
 | POST | `/clases/procesar-reloj` | Expira ofertas y aplica la tolerancia; acepta `ahora` para la demostración |
-| GET | `/socios`, `/socios/{id}` | Listado, faltas y sanción |
+| POST | `/socios` | Dar de alta a un socio (201); edad y deslinde (RN-01, RN-02) |
+| GET | `/socios`, `/socios/{id}` | Listado, ficha del alta, faltas y sanción |
 | POST | `/socios/{id}/ingresos` | Registrar ingreso (RN-05) |
 | GET | `/reportes/afluencia?desde=&hasta=` | Ingresos por hora y día de la semana (RN-35) |
 | GET | `/reportes/demanda` | Ocupación y lista de espera por clase (RN-36) |
@@ -212,16 +215,24 @@ Reservas (después de activar una membresía a cada socio, con los pasos 3 y 5):
     Con un ingreso registrado (`POST /socios/{id}/ingresos`), `GET /reportes/afluencia`
     con la fecha de hoy en `desde` y `hasta` lo muestra por hora y día.
 
+Alta de socio (BPMN 12.1):
+
+15. `POST /socios` con `fecha_nacimiento` de hace 17 años y `deslinde_firmado` y
+    `cuestionario_salud` en `true`: responde 201 con el nuevo número de socio y
+    `GET /eventos` muestra `DeslindeFirmado`. Sin esos dos datos responde 422 (RN-02);
+    con menos de 16 años, 422 (RN-01). Con su número se crea y activa la solicitud
+    (pasos 3 y 5).
+
 ## Alcance y relación con el análisis
 
-El BRD completo de FitZone vive en `docs/BRD.md`. El código implementa la
-**contratación de membresías** (BN-09 y BN-10), que es lo que usa el paquete de
+El BRD completo de FitZone vive en `docs/BRD.md`. El código implementa el
+**alta de socios y la contratación de membresías** (BN-07, BN-09 y BN-10), que es lo que usa el paquete de
 datos del PIA, **clases, reservas, lista de espera, sanciones y cancelación de clases**
 (BN-01 a BN-03) y **reportes** (BN-04 y BN-05). Las diferencias entre el paquete y el BRD están documentadas en el
 Anexo B del reporte, y el estado de cada regla en
 `docs/architecture/trazabilidad.md`.
 
 Quedan solo diseñados las excepciones,
-el alta con edad y deslinde, y el cambio de plan. Las notificaciones se publican
+el cambio de plan y el ajuste de aforo. Las notificaciones se publican
 como eventos, sin canal real, y `POST /clases/procesar-reloj` necesita una tarea
 programada externa que lo llame.
