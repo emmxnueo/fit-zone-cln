@@ -348,6 +348,40 @@ async function tablaSolicitudes(titulo, acciones, porDefecto) {
   ];
 }
 
+function recepcionAlta() {
+  const alta = (d) => api("POST", "/socios", {
+    nombre: d.nombre,
+    fecha_nacimiento: d.fecha_nacimiento,
+    correo: d.correo,
+    telefono: d.telefono,
+    ciudad: d.ciudad || null,
+    deslinde_firmado: d.deslinde_firmado === "on",
+    cuestionario_salud: d.cuestionario_salud === "on",
+  });
+  return [
+    el("h2", {}, "Nuevo socio"),
+    el("p", { class: "nota" }, "Debe tener 16 años cumplidos. Con 16 o 17 años, marca el deslinde y el cuestionario de salud. Después crea su solicitud en Nueva solicitud."),
+    el("form", { class: "tarjeta", onsubmit: enviar(alta, (s) => `Socio dado de alta: ${s.nombre} (${s.id}).`) },
+      el("label", {}, "Nombre", el("input", {
+        name: "nombre", required: true, minlength: "2", maxlength: "120", autocomplete: "name",
+        pattern: "[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' .\\-]+", title: "Solo letras, espacios, apóstrofo, punto o guion",
+      })),
+      el("label", {}, "Fecha de nacimiento", el("input", {
+        name: "fecha_nacimiento", type: "date", required: true,
+        min: `${new Date().getFullYear() - 120}-01-01`, max: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10),
+      })),
+      el("label", {}, "Correo", el("input", { name: "correo", type: "email", required: true, maxlength: "120", autocomplete: "email" })),
+      el("label", {}, "Teléfono", el("input", {
+        name: "telefono", type: "tel", required: true, maxlength: "20", inputmode: "tel",
+        pattern: "[0-9 \\(\\)+\\-]{10,20}", title: "10 dígitos, por ejemplo 81 1234 5678",
+      })),
+      selector("ciudad", "Ciudad", [["Monterrey", "Monterrey"], ["Apodaca", "Apodaca"]]),
+      el("label", { class: "casilla" }, el("input", { name: "deslinde_firmado", type: "checkbox" }), "Deslinde firmado en persona"),
+      el("label", { class: "casilla" }, el("input", { name: "cuestionario_salud", type: "checkbox" }), "Cuestionario de salud entregado"),
+      el("button", { type: "submit" }, "Dar de alta")),
+  ];
+}
+
 async function recepcionNueva() {
   const [socios, planes] = await Promise.all([api("GET", "/socios"), api("GET", "/planes")]);
   const crear = (d) => api("POST", "/solicitudes", {
@@ -523,9 +557,10 @@ const ROLES = {
   },
   recepcion: {
     nombre: "Recepción",
-    detalle: "Solicitudes de membresía e ingresos",
+    detalle: "Alta de socios, solicitudes de membresía e ingresos",
     secciones: [
       ["Solicitudes", () => tablaSolicitudes("Solicitudes", ACCIONES_RECEPCION, "SOLICITADA")],
+      ["Nuevo socio", recepcionAlta],
       ["Nueva solicitud", recepcionNueva],
       ["Ingresos", recepcionIngresos],
     ],

@@ -11,7 +11,7 @@ Las reglas RN-37 y RN-40 se componen de varias condiciones (socio activo, con l�
 - **Specification:** cada condición es un objeto con `is_satisfied_by(ctx)` y se combinan con `&`, `|` y `~`.
 
 ## Decisión
-Patrón Specification en `src/domain/specifications.py`. Las condiciones simples (`SocioActivo`, `SolicitudConLineas`, `SolicitudValidada`, `SocioPremium`, `TotalMinimo`, `CortesiaActiva`, `PlanesHabilitados`, `CupoDisponible`, `SinMembresiaActiva`) se componen en `SolicitudProcesable` (RN-37) y `BeneficioDeReferencia` (RN-40). Todas evalúan un `ContextoSolicitud` inmutable.
+Patrón Specification en `src/domain/specifications.py`. Las condiciones simples (`SocioActivo`, `SolicitudConLineas`, `SolicitudValidada`, `SocioPremium`, `TotalMinimo`, `CortesiaActiva`, `PlanesHabilitados`, `CupoDisponible`, `SinMembresiaActiva`, `RequisitosDeEdad`) se componen en `SolicitudProcesable` (RN-37) y `BeneficioDeReferencia` (RN-40). Todas evalúan un `ContextoSolicitud` inmutable.
 
 ## Consecuencias
 - Beneficio: cada regla se prueba sola y compuesta; agregar una regla no toca las demás; el `repr` muestra la composición.

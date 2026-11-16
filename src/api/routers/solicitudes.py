@@ -88,9 +88,10 @@ def beneficio_de_referencia(solicitud_id: SolicitudId, svc: Servicio):
 
 @router.post("/{solicitud_id}/activar", response_model=SolicitudOut,
              summary="Activar una membresía",
-             description="El socio no debe tener otra membresía activa, la solicitud debe "
+             description="El socio debe cumplir la edad y, con 16 o 17 años, tener el "
+                         "deslinde; no debe tener otra membresía activa, la solicitud debe "
                          "estar completa y el plan debe tener cupo. "
-                         "Reglas: RN-03, RN-37, RN-38, RN-39, RN-41.",
+                         "Reglas: RN-01, RN-02, RN-03, RN-37, RN-38, RN-39, RN-41.",
              responses={**_404, **_409, **_422})
 def activar(solicitud_id: SolicitudId, svc: Servicio):
     return a_salida(svc.activar(solicitud_id))

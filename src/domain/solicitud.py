@@ -1,4 +1,4 @@
-"""Aggregate Root: SolicitudDeMembresia (RN-37 a RN-41).
+"""Aggregate Root: SolicitudDeMembresia (RN-01 a RN-03, RN-37 a RN-41).
 
 Protege sus invariantes: el estado solo cambia mediante la máquina de estados,
 y cada cambio registra un Domain Event que la capa de aplicación publica.
@@ -20,6 +20,7 @@ from .specifications import (
     ContextoSolicitud,
     CupoDisponible,
     PlanesHabilitados,
+    RequisitosDeEdad,
     SinMembresiaActiva,
     SolicitudProcesable,
 )
@@ -68,6 +69,13 @@ class SolicitudDeMembresia:
     # --- comandos (cada uno pasa por la máquina de estados) -----------------
     def activar(self, ctx: ContextoSolicitud) -> None:
         nuevo = siguiente_estado(self.estado, Accion.ACTIVAR)  # 409 si no procede
+        if not RequisitosDeEdad().is_satisfied_by(ctx):  # Recepción, antes de RN-03 (BPMN 12.1)
+            menor_de_16 = ctx.socio.ficha.edad_en(self.fecha_solicitud) < 16
+            raise ReglaDeNegocioViolada(
+                "El socio debe tener 16 años cumplidos" if menor_de_16 else
+                "Con 16 o 17 años se exige el deslinde firmado y el cuestionario de salud",
+                "RN-01" if menor_de_16 else "RN-02",
+            )
         if not SinMembresiaActiva().is_satisfied_by(ctx):  # primero RN-03 (BPMN 12.1)
             raise MembresiaActivaExistente(
                 "El socio ya tiene una membresía activa", "RN-03"

@@ -22,6 +22,85 @@ class LineaIn(BaseModel):
     )
 
 
+# --- validación de formato (400): texto que captura una persona -------------
+_LETRA = "A-Za-zÁÉÍÓÚÜÑáéíóúüñ"
+_NOMBRE_PERSONA = re.compile(rf"[{_LETRA}]+(?:[ '.-][{_LETRA}]+)*\.?")
+_NOMBRE_CLASE = re.compile(rf"[{_LETRA}0-9]+(?:[ '.&-][{_LETRA}0-9]+)*")
+_CORREO = re.compile(r"[a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}")
+_TELEFONO = re.compile(r"(?:\+?52)?([0-9]{10})")
+
+
+def _formato(mensaje: str) -> PydanticCustomError:
+    """Error de formato (400) con un mensaje claro para quien captura."""
+    return PydanticCustomError("formato_fitzone", mensaje)
+
+
+def _texto(valor: str, patron: re.Pattern, minimo: int, mensaje: str) -> str:
+    """Quita espacios sobrantes y exige el patrón y un largo mínimo."""
+    limpio = " ".join(valor.split())
+    if len(limpio) < minimo or not patron.fullmatch(limpio):
+        raise _formato(mensaje)
+    return limpio
+
+
+class AltaSocioIn(BaseModel):
+    """Datos que captura Recepción al dar de alta a un socio (BPMN 12.1).
+    El formato se valida aquí (400); la edad y el deslinde son reglas del dominio (422)."""
+
+    nombre: str = Field(max_length=120, examples=["Ana López"],
+                        description="Nombre completo: letras, espacios, apóstrofo, punto o guion.")
+    fecha_nacimiento: date = Field(examples=["2009-05-20"],
+                                   description="Debe tener 16 años cumplidos (RN-01).")
+    correo: str = Field(max_length=120, examples=["ana@correo.com"],
+                        description="Correo electrónico; se guarda en minúsculas.")
+    telefono: str = Field(max_length=20, examples=["81 1234 5678"],
+                          description="10 dígitos; se aceptan espacios, guiones, paréntesis y +52.")
+    deslinde_firmado: StrictBool = Field(
+        default=False, examples=[True],
+        description="Firmó el deslinde en persona. Obligatorio con 16 o 17 años (RN-02).",
+    )
+    cuestionario_salud: StrictBool = Field(
+        default=False, examples=[True],
+        description="Entregó el cuestionario de salud. Obligatorio con 16 o 17 años (RN-02).",
+    )
+    ciudad: Literal["Monterrey", "Apodaca"] | None = Field(
+        default=None, examples=["Monterrey"],
+        description="Opcional. Las ciudades del paquete del PIA: Monterrey o Apodaca.",
+    )
+
+    @field_validator("nombre")
+    @classmethod
+    def _nombre(cls, valor: str) -> str:
+        return _texto(valor, _NOMBRE_PERSONA, 2,
+                      "El nombre solo puede tener letras, espacios, apóstrofo, punto o guion")
+
+    @field_validator("correo")
+    @classmethod
+    def _correo(cls, valor: str) -> str:
+        limpio = valor.strip().lower()
+        if not _CORREO.fullmatch(limpio):
+            raise _formato("El correo no es válido, por ejemplo ana@correo.com")
+        return limpio
+
+    @field_validator("telefono")
+    @classmethod
+    def _telefono(cls, valor: str) -> str:
+        m = _TELEFONO.fullmatch(re.sub(r"[\s()-]", "", valor))
+        if not m:
+            raise _formato("El teléfono debe tener 10 dígitos, por ejemplo 81 1234 5678")
+        return m.group(1)
+
+    @field_validator("fecha_nacimiento")
+    @classmethod
+    def _fecha(cls, valor: date) -> date:
+        hoy = date.today()
+        if valor > hoy:
+            raise _formato("La fecha de nacimiento no puede ser futura")
+        if valor.year < hoy.year - 120:
+            raise _formato("La fecha de nacimiento no es válida")
+        return valor
+
+
 class SolicitudIn(BaseModel):
     socio_id: str = Field(min_length=1, examples=["FIT-C005"], description="Número de socio.")
     lineas: list[LineaIn] = Field(default_factory=list, description="Planes que se contratan.")
@@ -44,23 +123,6 @@ class PagoIn(BaseModel):
     pago_confirmado: StrictBool = Field(
         examples=[True], description="true si el pago ya se recibió."
     )
-
-
-_LETRA = "A-Za-zÁÉÍÓÚÜÑáéíóúüñ"
-_NOMBRE_CLASE = re.compile(rf"[{_LETRA}0-9]+(?:[ '.&-][{_LETRA}0-9]+)*")
-_NOMBRE_PERSONA = re.compile(rf"[{_LETRA}]+(?:[ '.-][{_LETRA}]+)*\.?")
-
-
-def _formato(mensaje: str) -> PydanticCustomError:
-    """Error de formato (400) con un mensaje claro para quien captura."""
-    return PydanticCustomError("formato_fitzone", mensaje)
-
-
-def _texto(valor: str, patron: re.Pattern, minimo: int, mensaje: str) -> str:
-    limpio = " ".join(valor.split())
-    if len(limpio) < minimo or not patron.fullmatch(limpio):
-        raise _formato(mensaje)
-    return limpio
 
 
 class ClaseIn(BaseModel):
@@ -209,11 +271,22 @@ class FaltaOut(BaseModel):
     consumida: bool
 
 
+class FichaOut(BaseModel):
+    fecha_nacimiento: date
+    correo: str
+    telefono: str
+    deslinde_firmado: bool
+    cuestionario_salud: bool
+
+
 class SocioOut(BaseModel):
     id: str
     nombre: str
     es_premium: bool
     activo: bool
+    ficha: FichaOut | None = Field(
+        default=None, description="Datos del alta. Vacío en los socios del paquete del PIA."
+    )
     faltas: list[FaltaOut]
     sancion_hasta: datetime | None
 
@@ -321,6 +394,11 @@ def socio_a_salida(s: Socio) -> SocioOut:
         nombre=s.nombre,
         es_premium=s.es_premium,
         activo=s.activo,
+        ficha=FichaOut(
+            fecha_nacimiento=s.ficha.fecha_nacimiento, correo=s.ficha.correo,
+            telefono=s.ficha.telefono, deslinde_firmado=s.ficha.deslinde_firmado,
+            cuestionario_salud=s.ficha.cuestionario_salud,
+        ) if s.ficha else None,
         faltas=[
             FaltaOut(clase_id=f.clase_id, momento=f.momento, motivo=f.motivo.value,
                      consumida=f.consumida)

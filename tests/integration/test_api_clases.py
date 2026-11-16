@@ -1,5 +1,5 @@
 """API de clases, reservas, lista de espera, ingresos, sanciones y reportes."""
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from src.api.dependencias import get_servicio_clases, get_servicio_reportes
 from src.application.clases import ServicioDeClases

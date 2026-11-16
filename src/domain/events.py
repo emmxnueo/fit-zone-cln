@@ -57,6 +57,11 @@ class SolicitudCancelada(EventoDeDominio):
 
 
 @dataclass(frozen=True, kw_only=True)
+class DeslindeFirmado(EventoDeDominio):
+    """RN-02: el socio de 16 o 17 años entregó deslinde y cuestionario de salud."""
+
+
+@dataclass(frozen=True, kw_only=True)
 class ReservaConfirmada(EventoDeDominio):
     reserva_id: str = ""
 

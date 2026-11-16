@@ -10,6 +10,10 @@ _CAMPOS = {
     "pago_confirmado": "pago confirmado",
     "ahora": "fecha y hora",
     "salon": "salón",
+    "fecha_nacimiento": "fecha de nacimiento",
+    "telefono": "teléfono",
+    "deslinde_firmado": "deslinde firmado",
+    "cuestionario_salud": "cuestionario de salud",
 }
 
 _MENSAJES = {
@@ -21,6 +25,7 @@ _MENSAJES = {
     "string_type": "{Campo} debe ser texto",
     "string_too_short": "{Campo} no puede estar vacío",
     "string_too_long": "{Campo} es demasiado largo",
+    "string_pattern_mismatch": "{Campo} no tiene un formato válido",
     "list_type": "{Campo} debe ser una lista",
     "date_from_datetime_parsing": "{Campo} debe ser una fecha, por ejemplo 2026-12-01",
     "date_parsing": "{Campo} debe ser una fecha, por ejemplo 2026-12-01",
@@ -49,6 +54,9 @@ def _un_error(error: dict) -> str:
     campo = _CAMPOS.get(nombre, nombre)
     if error["type"] == "formato_fitzone":  # mensaje propio de los validadores
         return error["msg"]
+    if error["type"] == "literal_error":
+        opciones = error["ctx"]["expected"].replace("'", "").replace(" or ", " o ")
+        return f"El campo {campo} debe ser {opciones}"
     if error["type"] == "enum":
         opciones = error["ctx"]["expected"].replace("'", "").replace(" or ", " o ")
         return f"{campo.capitalize()} debe ser uno de: {opciones}"
