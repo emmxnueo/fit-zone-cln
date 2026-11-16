@@ -3,7 +3,7 @@
   "info": {
     "title": "FitZone",
     "description": "\nAPI de FitZone (Equipo 11, FIME-UANL): membresías, clases, reservas, lista de espera,\nsanciones y reportes.\n\n**Cómo probarla**\n\n1. Crea una solicitud en `POST /solicitudes`.\n2. Actívala en `POST /solicitudes/{solicitud_id}/activar`.\n3. Consulta las clases en `GET /clases` y reserva en `POST /clases/{clase_id}/reservas`.\n\n**Qué significa cada respuesta**\n\n| Código | Significado |\n|---|---|\n| 200 | Todo salió bien |\n| 201 | Se creó correctamente |\n| 400 | Faltan datos o tienen un formato incorrecto |\n| 404 | Lo que buscas no existe |\n| 409 | La acción no se puede hacer en este momento |\n| 422 | No se cumple una regla del negocio |\n\nLos errores explican qué pasó e indican la regla del BRD, por ejemplo `RN-13`.\n",
-    "version": "0.7.0"
+    "version": "0.7.1"
   },
   "paths": {
     "/health": {
@@ -800,7 +800,7 @@
           "Clases y reservas"
         ],
         "summary": "Crear una clase",
-        "description": "La capacidad debe ser de al menos 1 lugar. Regla: RN-11.",
+        "description": "Inicio futuro, instructor obligatorio y capacidad de 1 a 100 lugares. Regla: RN-11.",
         "operationId": "crear_clase_clases_post",
         "requestBody": {
           "required": true,
@@ -906,7 +906,7 @@
           "Clases y reservas"
         ],
         "summary": "Revisar ofertas vencidas y retrasos",
-        "description": "Vence las ofertas sin confirmar y marca como no-show a quien lleva más de 10 minutos de retraso. Puedes indicar una fecha y hora para simularlo. Reglas: RN-17, RN-20, RN-21.",
+        "description": "Vence las ofertas sin confirmar y marca como no-show a quien lleva más de 10 minutos de retraso. Puedes repetirlo con una fecha y hora pasadas, pero no adelantarlo. Reglas: RN-17, RN-20, RN-21.",
         "operationId": "procesar_reloj_clases_procesar_reloj_post",
         "requestBody": {
           "content": {
@@ -938,6 +938,16 @@
           },
           "400": {
             "description": "Faltan datos o tienen un formato incorrecto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No se cumple una regla del negocio",
             "content": {
               "application/json": {
                 "schema": {
@@ -1784,9 +1794,9 @@
         "properties": {
           "nombre": {
             "type": "string",
-            "minLength": 1,
+            "maxLength": 60,
             "title": "Nombre",
-            "description": "Nombre de la clase.",
+            "description": "Nombre de la clase: letras, números, espacios, punto, guion o &.",
             "examples": [
               "Yoga"
             ]
@@ -1802,7 +1812,7 @@
             "type": "string",
             "format": "date-time",
             "title": "Inicio",
-            "description": "Fecha y hora de Monterrey.",
+            "description": "Fecha y hora de Monterrey; debe ser futura.",
             "examples": [
               "2026-12-01T18:00:00"
             ]
@@ -1810,22 +1820,23 @@
           "capacidad": {
             "type": "integer",
             "title": "Capacidad",
-            "description": "Lugares disponibles. Mínimo 1.",
+            "description": "Lugares disponibles, de 1 a 100.",
             "examples": [
               20
             ]
           },
           "instructor": {
             "type": "string",
+            "maxLength": 80,
             "title": "Instructor",
-            "description": "Quien imparte la clase.",
-            "default": "",
+            "description": "Quien imparte la clase. Obligatorio: solo él puede pedir cancelarla (RN-29).",
             "examples": [
               "Ana Ruiz"
             ]
           },
           "salon": {
             "type": "string",
+            "maxLength": 40,
             "title": "Salon",
             "description": "Dónde se imparte.",
             "default": "",
@@ -1839,7 +1850,8 @@
           "nombre",
           "categoria",
           "inicio",
-          "capacidad"
+          "capacidad",
+          "instructor"
         ],
         "title": "ClaseIn"
       },
@@ -1881,6 +1893,12 @@
           "lugares_libres": {
             "type": "integer",
             "title": "Lugares Libres"
+          },
+          "ya_inicio": {
+            "type": "boolean",
+            "title": "Ya Inicio",
+            "description": "La clase ya empezó según el reloj del negocio: no admite reservas ni cancelaciones.",
+            "default": false
           },
           "etiqueta": {
             "anyOf": [

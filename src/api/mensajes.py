@@ -20,6 +20,7 @@ _MENSAJES = {
     "bool_parsing": "{Campo} debe ser true o false",
     "string_type": "{Campo} debe ser texto",
     "string_too_short": "{Campo} no puede estar vacío",
+    "string_too_long": "{Campo} es demasiado largo",
     "list_type": "{Campo} debe ser una lista",
     "date_from_datetime_parsing": "{Campo} debe ser una fecha, por ejemplo 2026-12-01",
     "date_parsing": "{Campo} debe ser una fecha, por ejemplo 2026-12-01",
@@ -46,8 +47,11 @@ def _un_error(error: dict) -> str:
     if not nombre:
         return "Falta el cuerpo de la petición"
     campo = _CAMPOS.get(nombre, nombre)
+    if error["type"] == "formato_fitzone":  # mensaje propio de los validadores
+        return error["msg"]
     if error["type"] == "enum":
-        return f"{campo.capitalize()} debe ser uno de: {error['ctx']['expected']}"
+        opciones = error["ctx"]["expected"].replace("'", "").replace(" or ", " o ")
+        return f"{campo.capitalize()} debe ser uno de: {opciones}"
     plantilla = _MENSAJES.get(error["type"], "{Campo} no es válido")
     return plantilla.format(campo=f"el campo {campo}", Campo=f"El campo {campo}")
 

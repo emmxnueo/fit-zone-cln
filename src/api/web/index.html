@@ -174,6 +174,11 @@ const ETIQUETAS = {
 };
 const texto = (valor) => ETIQUETAS[valor] || String(valor).replaceAll("_", " ").toLowerCase()
   .replace(/^./, (letra) => letra.toUpperCase());
+const ahoraLocal = () => {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
+const confirmadas = (c) => c.reservas.filter((r) => r.estado === "CONFIRMADA").length;
 const hoy = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -229,7 +234,8 @@ function salir() {
 
 // --- socio ------------------------------------------------------------------
 async function socioClases() {
-  const clases = await api("GET", `/clases?socio_id=${encodeURIComponent(estado.persona)}`);
+  const clases = (await api("GET", `/clases?socio_id=${encodeURIComponent(estado.persona)}`))
+    .filter((c) => !c.ya_inicio);
   const accion = (c) => {
     if (c.estado === "CANCELADA") return "Cancelada";
     if (c.reservas.some((r) => r.socio_id === estado.persona && r.estado === "CONFIRMADA")) return "Reservada";
@@ -256,9 +262,11 @@ async function socioReservas() {
   for (const c of clases) {
     for (const r of c.reservas) {
       if (r.socio_id === estado.persona && r.estado === "CONFIRMADA") {
-        reservas.push([c.nombre, fecha(c.inicio), boton("Cancelar",
+        reservas.push([c.nombre, fecha(c.inicio), c.ya_inicio ? "Ya inició" : boton("Cancelar",
           () => api("POST", `/clases/${c.id}/reservas/${r.id}/cancelar`),
-          "Reserva cancelada. Con menos de 1 h de anticipación cuenta como falta.", "secundario")]);
+          (clase) => (clase.reservas.find((x) => x.id === r.id)?.estado === "CANCELADA_TARDE"
+            ? "Reserva cancelada. Como faltaba menos de 1 h, cuenta como falta (RN-16)."
+            : "Reserva cancelada sin falta."), "secundario")]);
       }
     }
     const activas = c.lista_espera.filter((e) => ["EN_ESPERA", "OFERTADA"].includes(e.estado));
@@ -290,7 +298,7 @@ async function socioHistorial() {
     el("h2", {}, "Mi historial"),
     el("p", { class: "nota" }, `Membresía: ${vigente ? texto(vigente.estado) : "sin membresía activa"}`),
     el("p", { class: "nota" }, sancionada
-      ? `Sanción activa hasta ${fecha(socio.sancion_hasta)}. Puedes entrar al gimnasio, pero no reservar.`
+      ? `Sanción activa hasta el ${fecha(socio.sancion_hasta)}: puedes entrar al gimnasio, pero no reservar.`
       : "Sin sanción activa."),
     el("h3", {}, "Faltas"),
     tabla(["Fecha", "Motivo", "Estado"],
@@ -379,8 +387,8 @@ async function instructorClases() {
     el("p", { class: "nota" }, "La cancelación exige 2 h o más de aviso y la aprueba el Administrador."),
     tabla(["Clase", "Inicio", "Salón", "Inscritos#", "Estado", ""],
       clases.map((c) => [
-        c.nombre, fecha(c.inicio), c.salon, c.capacidad - c.lugares_libres, texto(c.estado),
-        c.estado === "PROGRAMADA"
+        c.nombre, fecha(c.inicio), c.salon, confirmadas(c), c.ya_inicio ? "Ya inició" : texto(c.estado),
+        c.estado === "PROGRAMADA" && !c.ya_inicio
           ? boton("Solicitar cancelación", () => api("POST", `/clases/${c.id}/cancelacion`,
             { instructor: estado.persona }), "Solicitud enviada al Administrador.", "secundario")
           : "",
@@ -399,15 +407,25 @@ async function adminClases() {
   return [
     el("h2", {}, "Clases"),
     el("form", { class: "tarjeta", onsubmit: enviar(crear, "Clase creada.") },
-      el("label", {}, "Nombre", el("input", { name: "nombre", required: true })),
+      el("label", {}, "Nombre", el("input", {
+        name: "nombre", required: true, minlength: "2", maxlength: "60",
+        pattern: "[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 '.&\\-]+", title: "Letras, números, espacios, punto, guion o &",
+      })),
       selector("categoria", "Categoría", [["ESTANDAR", "Estándar"], ["PREMIUM", "Premium"]]),
-      el("label", {}, "Inicio", el("input", { name: "inicio", type: "datetime-local", required: true })),
-      el("label", {}, "Capacidad", el("input", { name: "capacidad", type: "number", min: "1", value: "10", required: true })),
-      el("label", {}, "Instructor", el("input", { name: "instructor" })),
-      el("label", {}, "Salón", el("input", { name: "salon" })),
+      el("label", {}, "Inicio", el("input", { name: "inicio", type: "datetime-local", required: true, min: ahoraLocal() })),
+      el("label", {}, "Capacidad", el("input", { name: "capacidad", type: "number", min: "1", max: "100", value: "10", required: true })),
+      el("label", {}, "Instructor", el("input", {
+        name: "instructor", required: true, minlength: "2", maxlength: "80",
+        pattern: "[A-Za-zÁÉÍÓÚÜÑáéíóúüñ '.\\-]+", title: "Solo letras, espacios, punto o guion",
+      })),
+      el("label", {}, "Salón", el("input", {
+        name: "salon", maxlength: "40",
+        pattern: "[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 '.&\\-]+", title: "Letras, números, espacios, punto o guion",
+      })),
       el("button", { type: "submit" }, "Crear clase")),
     tabla(["Clase", "Inicio", "Instructor", "Categoría", "Libres#", "Estado"],
-      clases.map((c) => [c.nombre, fecha(c.inicio), c.instructor, texto(c.categoria), c.lugares_libres, texto(c.estado)]),
+      clases.map((c) => [c.nombre, fecha(c.inicio), c.instructor, texto(c.categoria), c.lugares_libres,
+        c.ya_inicio && c.estado === "PROGRAMADA" ? "Ya inició" : texto(c.estado)]),
       "No hay clases."),
   ];
 }
@@ -470,9 +488,9 @@ async function adminReloj() {
   const r = estado.resultado;
   return [
     el("h2", {}, "Reloj del sistema"),
-    el("p", { class: "nota" }, "Expira ofertas y aplica la tolerancia de retraso. Deja la fecha vacía para usar la hora real."),
+    el("p", { class: "nota" }, "Expira ofertas y aplica la tolerancia de retraso. Deja la fecha vacía para usar la hora real; solo se puede repetir una hora pasada."),
     el("form", { class: "tarjeta", onsubmit: enviar(correr, "Reloj ejecutado.") },
-      el("label", {}, "Simular fecha y hora", el("input", { name: "ahora", type: "datetime-local" })),
+      el("label", {}, "Repetir en una fecha y hora pasadas", el("input", { name: "ahora", type: "datetime-local", max: ahoraLocal() })),
       el("button", { type: "submit" }, "Ejecutar reloj")),
     r ? tabla(["Resultado", "Cantidad#"], [
       ["Ofertas expiradas", r.ofertas_expiradas], ["Lugares ofrecidos", r.lugares_ofrecidos],
@@ -482,13 +500,16 @@ async function adminReloj() {
 }
 
 async function adminEventos() {
-  const eventos = (await api("GET", "/eventos")).reverse();
+  const [eventos, clases] = await Promise.all([api("GET", "/eventos"), api("GET", "/clases")]);
+  eventos.reverse();
+  const nombreClase = Object.fromEntries(clases.map((c) => [c.id, `${c.nombre} (${fecha(c.inicio)})`]));
   return [
     el("h2", {}, "Eventos"),
     el("p", { class: "nota" }, "Domain Events publicados desde el último reinicio del servicio."),
     tabla(["Momento", "Evento", "Socio", "Clase o solicitud", "Avisar a"],
       eventos.map((e) => [
-        fecha(e.ocurrido_en), e.evento, e.socio_id, e.clase_id || e.solicitud_id, e.socios_a_notificar.join(", "),
+        fecha(e.ocurrido_en), e.evento, e.socio_id,
+        e.clase_id ? nombreClase[e.clase_id] || e.clase_id : e.solicitud_id, e.socios_a_notificar.join(", "),
       ]),
       "Aún no hay eventos."),
   ];

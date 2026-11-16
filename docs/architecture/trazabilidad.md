@@ -92,11 +92,11 @@ Recorre el camino **necesidad (BN) → historia (US) y Gherkin → regla (RN) �
 | `POST /solicitudes/{id}/vencer` | ACTIVA o SUSPENDIDA → VENCIDA | RN-04, RN-41 | 200, 404, 409 | `API::test_vencer_renovar_y_rn08` |
 | `POST /solicitudes/{id}/renovar` | VENCIDA → ACTIVA | RN-08, RN-41 | 200, 400, 404, 409, 422 | `API::test_vencer_renovar_y_rn08` |
 | `POST /solicitudes/{id}/dar-de-baja` | ACTIVA o SUSPENDIDA → CANCELADA | RN-10, RN-41 | 200, 400, 404, 409, 422 | `API::test_baja_requiere_administrador_rn10` |
-| `POST /clases`, `GET /clases`, `GET /clases/{id}` | Crear, catálogo y consulta | RN-11, RN-14 | 200, 201, 400, 404, 422 | `API/clases::test_formato_y_reglas_al_crear_clase`, `test_clase_premium_y_etiquetas` |
+| `POST /clases`, `GET /clases`, `GET /clases/{id}` | Crear (inicio futuro, instructor obligatorio, capacidad de 1 a 100), catálogo y consulta (`ya_inicio`) | RN-11, RN-13, RN-14 | 200, 201, 400, 404, 422 | `API/clases::test_formato_y_reglas_al_crear_clase`, `test_clase_premium_y_etiquetas`, `test_no_se_crean_clases_en_el_pasado`, `test_formato_de_la_clase_es_400`, `test_ya_inicio_se_calcula_con_el_reloj_del_negocio`, `test_sin_membresia_la_etiqueta_no_dice_incluida` |
 | `POST /clases/{id}/reservas` | Reservar o entrar a la lista | RN-11, RN-13, RN-19, RN-24, RN-26 | 201, 400, 404, 409, 422 | `API/clases::test_reservar_y_lista_de_espera` |
 | `POST /clases/{id}/reservas/{rid}/cancelar` | Cancelar | RN-15, RN-16, RN-20 | 200, 404, 409 | `API/clases::test_cancelar_ofrecer_y_confirmar` |
 | `POST /clases/{id}/oferta/confirmar` | Confirmar oferta | RN-20, RN-13 | 200, 400, 404, 409, 422 | `API/clases::test_cancelar_ofrecer_y_confirmar` |
-| `POST /clases/procesar-reloj` | Actor Sistema | RN-17, RN-20, RN-21, RN-23 | 200, 400 | `API/clases::test_ingreso_y_tolerancia_con_el_reloj` |
+| `POST /clases/procesar-reloj` | Actor Sistema | RN-17, RN-20, RN-21, RN-23 | 200, 400, 422 | `API/clases::test_ingreso_y_tolerancia_con_el_reloj`, `test_el_reloj_no_se_adelanta_pero_se_puede_repetir` |
 | `POST /clases/{id}/cancelacion` | Solicitar cancelación | RN-29 | 200, 400, 404, 409, 422 | `API/clases::test_cancelacion_de_clase_aprobada`, `test_solicitud_de_cancelacion_invalida` |
 | `POST /clases/{id}/cancelacion/resolver` | Aprobar o rechazar | RN-30, RN-31 | 200, 400, 404, 409 | `API/clases::test_cancelacion_de_clase_aprobada`, `test_cancelacion_de_clase_rechazada` |
 | `GET /reportes/afluencia` | Afluencia por hora y día | RN-35 | 200, 400, 422 | `API/clases::test_reporte_de_afluencia`, `test_reporte_de_afluencia_con_rango_invalido` |

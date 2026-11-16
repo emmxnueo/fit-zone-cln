@@ -49,7 +49,7 @@ _SECCIONES = [
 app = FastAPI(
     title="FitZone",
     description=_DESCRIPCION,
-    version="0.7.0",
+    version="0.7.1",
     openapi_tags=_SECCIONES,
     docs_url=None,
 )

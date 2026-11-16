@@ -112,7 +112,7 @@ que se ve: no es autenticación, y la API sigue abierta. Swagger sigue en `/docs
 | POST | `/clases/{id}/oferta/confirmar` | Confirmar la oferta de lugar (15 min) |
 | POST | `/clases/{id}/cancelacion` | El instructor solicita cancelar su clase, con 2 h o más de aviso |
 | POST | `/clases/{id}/cancelacion/resolver` | El Administrador aprueba o rechaza |
-| POST | `/clases/procesar-reloj` | Expira ofertas y aplica la tolerancia; acepta `ahora` para la demostración |
+| POST | `/clases/procesar-reloj` | Expira ofertas y aplica la tolerancia; acepta un `ahora` pasado, nunca futuro |
 | GET | `/socios`, `/socios/{id}` | Listado, faltas y sanción |
 | POST | `/socios/{id}/ingresos` | Registrar ingreso (RN-05) |
 | GET | `/reportes/afluencia?desde=&hasta=` | Ingresos por hora y día de la semana (RN-35) |
@@ -197,14 +197,17 @@ a `main` redespliega automáticamente.
 
 Reservas (después de activar una membresía a cada socio, con los pasos 3 y 5):
 
-8. `POST /clases` con capacidad 1 y un `inicio` futuro, en hora local y sin zona.
+8. `POST /clases` con capacidad 1, un `instructor` y un `inicio` futuro, en hora local y
+   sin zona. Una fecha pasada responde 422; un nombre con símbolos o sin instructor, 400.
 9. `POST /clases/{id}/reservas` con dos socios: el primero queda confirmado y el
    segundo en la lista de espera.
 10. Cancelar la reserva del primero: `GET /clases/{id}` muestra la entrada `OFERTADA`.
 11. `POST /clases/{id}/oferta/confirmar` con el segundo socio, o
-    `POST /clases/procesar-reloj` con un `ahora` 16 minutos después para expirarla.
-12. Para ver un no-show, llamar `procesar-reloj` con un `ahora` 11 minutos después del
-    inicio; `GET /socios/{id}` muestra la falta y, a la tercera del mes, la sanción.
+    esperar 16 minutos y llamar `POST /clases/procesar-reloj` para expirarla.
+12. Para ver un no-show, crear una clase que empiece en 2 minutos, reservarla y llamar
+    `procesar-reloj` cuando pasen 11 minutos del inicio; `GET /socios/{id}` muestra la
+    falta y, a la tercera del mes, la sanción. El reloj no se puede adelantar (422):
+    registraría no-shows de clases que aún no ocurren.
 13. `POST /clases/FIT-K001/cancelacion` con `{"instructor": "Ana Ruiz"}` y luego
     `.../cancelacion/resolver` con `{"aprobada": true}`: la clase pasa a `CANCELADA`,
     sus reservas se cancelan sin falta y `GET /eventos` muestra a quién avisar.

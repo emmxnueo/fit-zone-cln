@@ -74,6 +74,10 @@ class ServicioDeClases:
     def listar(self) -> list[Clase]:
         return self.clases.listar()
 
+    def ya_inicio(self, clase: Clase) -> bool:
+        """Según el reloj del negocio, para que la interfaz no ofrezca acciones imposibles."""
+        return self.reloj.ahora() >= clase.inicio
+
     def listar_socios(self) -> list[Socio]:
         return self.socios.listar()
 
@@ -84,8 +88,11 @@ class ServicioDeClases:
         return socio
 
     def etiqueta(self, clase: Clase, socio_id: str) -> str:
-        """RN-14: cómo ve el socio la clase en el catálogo."""
+        """RN-14: cómo ve el socio la clase en el catálogo. Sin membresía vigente
+        nada va incluido: reservar exige una (RN-13)."""
         ctx = self._contexto(clase, self.obtener_socio(socio_id), self.reloj.ahora())
+        if not ctx.membresia_vigente:
+            return "Necesitas una membresía vigente"
         if PlanIncluyeCategoria().is_satisfied_by(ctx):
             return "Incluida en tu membresía"
         return "Costo adicional / Exclusiva Plan Premium"
@@ -95,6 +102,8 @@ class ServicioDeClases:
         self, nombre: str, categoria: CategoriaClase, inicio: datetime, capacidad: int,
         instructor: str = "", salon: str = "",
     ) -> Clase:
+        if inicio <= self.reloj.ahora():
+            raise ReglaDeNegocioViolada("La clase debe programarse en una fecha y hora futuras")
         clase = Clase(
             f"CLA-{uuid4().hex[:8].upper()}", nombre, categoria, inicio, capacidad,
             instructor=instructor, salon=salon,
@@ -149,6 +158,15 @@ class ServicioDeClases:
         momento = self.reloj.ahora()
         self.ingresos.registrar(socio_id, momento)
         return momento
+
+    def ejecutar_reloj(self, ahora: datetime | None = None) -> ResumenReloj:
+        """Entrada desde la API: se puede repetir una hora pasada, pero no adelantar
+        el reloj, porque registraría no-shows de clases que aún no ocurren."""
+        if ahora is not None and ahora > self.reloj.ahora():
+            raise ReglaDeNegocioViolada(
+                "No se puede adelantar el reloj: elige una hora pasada o deja la fecha vacía"
+            )
+        return self.procesar_reloj(ahora)
 
     def procesar_reloj(self, ahora: datetime | None = None) -> ResumenReloj:
         """Actor Sistema (reloj): expira ofertas y aplica la tolerancia de retraso."""

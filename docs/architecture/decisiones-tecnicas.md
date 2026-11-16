@@ -52,7 +52,7 @@ La primera petición crea las tablas y carga el paquete del profesor desde `data
 
 - Los Domain Events se publican en memoria (`PublicadorEnMemoria`): `GET /eventos` se vacía si el servicio se reinicia.
 - El vencimiento (`/vencer`) lo dispara una llamada explícita; no hay un reloj que lo ejecute solo al llegar la fecha (RN-04).
-- Las ofertas vencidas y los no-shows se procesan al llamar `POST /clases/procesar-reloj`; hace falta una tarea programada externa. Ese endpoint acepta `ahora` para la demostración, y no hay autenticación que lo restrinja.
+- Las ofertas vencidas y los no-shows se procesan al llamar `POST /clases/procesar-reloj`; hace falta una tarea programada externa. Ese endpoint acepta un `ahora` pasado para repetir el proceso, pero no uno futuro (422), y no hay autenticación que lo restrinja.
 - Dos reservas simultáneas podrían superar la capacidad: no hay bloqueo en la base de datos. El cupo de los planes tiene el mismo riesgo.
 - La hora del negocio es la de Monterrey, sin zona (`RelojDelSistema`); la API rechaza fechas con zona (400).
 - El servicio de Render gratuito se duerme con inactividad; la primera petición puede tardar hasta un minuto.

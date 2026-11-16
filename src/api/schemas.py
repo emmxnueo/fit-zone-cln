@@ -1,8 +1,10 @@
 """Contratos de la API (entrada y salida). Los importes viajan como texto
 decimal ("1500.00") para no perder precisión con float."""
+import re
 from datetime import date, datetime
 
-from pydantic import BaseModel, Field, NaiveDatetime, StrictBool, StrictInt
+from pydantic import BaseModel, Field, NaiveDatetime, StrictBool, StrictInt, field_validator
+from pydantic_core import PydanticCustomError
 
 from src.domain.clase import Clase
 from src.domain.entities import Socio
@@ -43,17 +45,66 @@ class PagoIn(BaseModel):
     )
 
 
+_LETRA = "A-Za-zÁÉÍÓÚÜÑáéíóúüñ"
+_NOMBRE_CLASE = re.compile(rf"[{_LETRA}0-9]+(?:[ '.&-][{_LETRA}0-9]+)*")
+_NOMBRE_PERSONA = re.compile(rf"[{_LETRA}]+(?:[ '.-][{_LETRA}]+)*\.?")
+CAPACIDAD_MAXIMA = 100
+
+
+def _formato(mensaje: str) -> PydanticCustomError:
+    """Error de formato (400) con un mensaje claro para quien captura."""
+    return PydanticCustomError("formato_fitzone", mensaje)
+
+
+def _texto(valor: str, patron: re.Pattern, minimo: int, mensaje: str) -> str:
+    limpio = " ".join(valor.split())
+    if len(limpio) < minimo or not patron.fullmatch(limpio):
+        raise _formato(mensaje)
+    return limpio
+
+
 class ClaseIn(BaseModel):
-    nombre: str = Field(min_length=1, examples=["Yoga"], description="Nombre de la clase.")
+    nombre: str = Field(max_length=60, examples=["Yoga"],
+                        description="Nombre de la clase: letras, números, espacios, punto, guion o &.")
     categoria: CategoriaClase = Field(
         examples=["ESTANDAR"], description="ESTANDAR va en todos los planes; PREMIUM solo en Premium."
     )
     inicio: NaiveDatetime = Field(
-        examples=["2026-12-01T18:00:00"], description="Fecha y hora de Monterrey."
+        examples=["2026-12-01T18:00:00"], description="Fecha y hora de Monterrey; debe ser futura."
     )
-    capacidad: StrictInt = Field(examples=[20], description="Lugares disponibles. Mínimo 1.")
-    instructor: str = Field(default="", examples=["Ana Ruiz"], description="Quien imparte la clase.")
-    salon: str = Field(default="", examples=["Salón 1"], description="Dónde se imparte.")
+    capacidad: StrictInt = Field(examples=[20],
+                                 description=f"Lugares disponibles, de 1 a {CAPACIDAD_MAXIMA}.")
+    instructor: str = Field(max_length=80, examples=["Ana Ruiz"],
+                            description="Quien imparte la clase. Obligatorio: solo él puede pedir "
+                                        "cancelarla (RN-29).")
+    salon: str = Field(default="", max_length=40, examples=["Salón 1"], description="Dónde se imparte.")
+
+    @field_validator("nombre")
+    @classmethod
+    def _nombre(cls, valor: str) -> str:
+        return _texto(valor, _NOMBRE_CLASE, 2,
+                      "El nombre de la clase solo puede tener letras, números, espacios, punto, guion o &")
+
+    @field_validator("instructor")
+    @classmethod
+    def _instructor(cls, valor: str) -> str:
+        return _texto(valor, _NOMBRE_PERSONA, 2,
+                      "El instructor es obligatorio y solo puede tener letras, espacios, punto o guion")
+
+    @field_validator("salon")
+    @classmethod
+    def _salon(cls, valor: str) -> str:
+        if not valor.strip():
+            return ""
+        return _texto(valor, _NOMBRE_CLASE, 1,
+                      "El salón solo puede tener letras, números, espacios, punto o guion")
+
+    @field_validator("capacidad")
+    @classmethod
+    def _capacidad(cls, valor: int) -> int:
+        if valor > CAPACIDAD_MAXIMA:  # el mínimo lo exige el dominio (RN-11, 422)
+            raise _formato(f"La capacidad no puede ser mayor a {CAPACIDAD_MAXIMA}")
+        return valor
 
 
 class SocioIn(BaseModel):
@@ -135,6 +186,10 @@ class ClaseOut(BaseModel):
     salon: str
     estado: str
     lugares_libres: int
+    ya_inicio: bool = Field(
+        default=False, description="La clase ya empezó según el reloj del negocio: no admite "
+                                   "reservas ni cancelaciones."
+    )
     etiqueta: str | None = Field(
         default=None, description="Solo si se consulta con `socio_id` (RN-14)."
     )
@@ -241,7 +296,7 @@ def a_salida(s: SolicitudDeMembresia) -> SolicitudOut:
     )
 
 
-def clase_a_salida(c: Clase, etiqueta: str | None = None) -> ClaseOut:
+def clase_a_salida(c: Clase, etiqueta: str | None = None, ya_inicio: bool = False) -> ClaseOut:
     return ClaseOut(
         id=c.id,
         nombre=c.nombre,
@@ -252,6 +307,7 @@ def clase_a_salida(c: Clase, etiqueta: str | None = None) -> ClaseOut:
         salon=c.salon,
         estado=c.estado.value,
         lugares_libres=c.lugares_libres,
+        ya_inicio=ya_inicio,
         etiqueta=etiqueta,
         reservas=[
             ReservaOut(id=r.id, socio_id=r.socio_id, creada_en=r.creada_en, estado=r.estado.value)
